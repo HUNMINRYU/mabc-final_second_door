@@ -11,7 +11,7 @@ function sanitizeIdentifiers(text: string): string {
 
   // URL
   s = s.replace(
-    /(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+)/gi,
+    /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi,
     "[링크]",
   );
 
@@ -21,7 +21,7 @@ function sanitizeIdentifiers(text: string): string {
 
   // Toss 라벨 + 연속된 숫자 (계좌번호 유사)
   s = s.replace(
-    /\b(Toss|토스|toss)\s*[\-·\s]?\d[\d\-\s]*\d\b/gi,
+    /\b(Toss|토스|toss)\s*[-·\s]?\d[\d\-\s]*\d\b/gi,
     "[메시지 속 계좌]",
   );
   // 계좌번호처럼 보이는 10~16자리 은행 코드 패턴 (예외적으로 일부만)
@@ -44,9 +44,9 @@ function sanitizeIdentifiers(text: string): string {
 
   // 경찰청·금감원 공개 사례에서 자주 등장하는 suspicious 패턴 보강
   // "고객님" 호칭 + 계좌/송금 요구 조합 (보이스피싱 전형)
-  if (/\b고객님|고객\s*님\b/i.test(text)) {
+  if (/고객님|고객\s*님/i.test(text)) {
     s = s.replace(
-      /\b(고객님|고객\s*님)\b/gi,
+      /(고객님|고객\s*님)/gi,
       "[발신자 표시]",
     );
   }
@@ -77,7 +77,7 @@ function checkProhibitedOutput(fields: Record<string, string>): string[] {
     prohibited.push("긴급·기관 번호 숫자");
   }
 
-  // 복구·환불·배상·보장 약속
+  // 복구·환불·배상·보상 약속
   if (
     /\b(환불|복구|배상|보상|되돌림|원상|보장[합니다]?|예정[입니다]?)\b/i.test(allText)
   ) {
@@ -108,35 +108,35 @@ function buildFields(raw: string): Record<string, string> {
     const lower = message.toLowerCase();
 
     const hasTransfer =
-      /\b(이체|송금|입금|보내(어|주세요|줘|줄래)|계좌|통장|은행|금융|정산|수금|납부|결제)\b/i.test(
+      /(이체|송금|입금|보내(어|주세요|줘|줄래)|계좌|통장|은행|금융|정산|수금|납부|결제)/i.test(
         message,
-      ) && /\b(돈|금액|급[합니다]?|당장|지금|바로|오늘|어제|병원비|빌려|대출|상환|외상)\b/i.test(
+      ) && /(돈|금액|급[합니다]?|당장|지금|바로|오늘|어제|병원비|빌려|대출|상환|외상)/i.test(
         message,
       );
 
     const hasCredential =
-      /\b(비밀번호|인증번호|보안카드|OTP|일회용|인증[번호코드]|계정|아이디|로그인|확인[번호코드]|본인[인증확인])\b/i.test(
+      /(비밀번호|인증번호|보안카드|OTP|일회용|인증[번호코드]|계정|아이디|로그인|확인[번호코드]|본인[인증확인])/i.test(
         message,
       );
 
     const hasLinkInstall =
       /(https?:\/\/|www\.)/i.test(message) &&
-      /\b(입력|설치|다운로드|실행|열어|클릭|접속|확인[하세요하]|로그|인증|보호[앱프로그램]|업데이트|백신|보안[프로그램앱])\b/i.test(
+      /(입력|설치|다운로드|실행|열어|클릭|접속|확인[하세요하]|로그|인증|보호[앱프로그램]|업데이트|백신|보안[프로그램앱])/i.test(
         message,
       );
 
     const hasRemote =
-      /\b(원격|원격제어|팀뷰어|AnyDesk|애니데스크|화면공유|접속|제어|조종|접속|연결|해킹|보기|관찰|감시)\b/i.test(
+      /(원격|원격제어|팀뷰어|AnyDesk|애니데스크|화면공유|접속|제어|조종|접속|연결|해킹|보기|관찰|감시)/i.test(
         message,
       );
 
     const hasSecretPressure =
-      /\b(비밀|함부로|절대|누구에게도|말하지|밖에|다른사람|알려지면|혼자|조용히|급[합니다]?|지금 당장|바로|빨리|늦으면|기회|마지막|오늘 안|지금만|긴급|중요[합니다]?|사망|사고|입원|구속|체포|경찰|법원|소송|출석|출석요구|수사|조사)\b/i.test(
+      /(비밀|함부로|절대|누구에게도|말하지|밖에|다른사람|알려지면|혼자|조용히|급[합니다]?|지금 당장|바로|빨리|늦으면|기회|마지막|오늘 안|지금만|긴급|중요[합니다]?|사망|사고|입원|구속|체포|경찰|법원|소송|출석|출석요구|수사|조사)/i.test(
         message,
       );
 
     const hasActionDone =
-      /\b(이미|벌써|방금|아까|전에|완료|끝났[습니다]?|보냈[습니다]?|입금[했습니했]?(어요|다)|보냈어요|(송금|이체|인증)[했습니했]?)\b/i.test(
+      /(이미|벌써|방금|아까|전에|완료|끝났[습니다]?|보냈[습니다]?|입금[했습니했]?(어요|다)|보냈어요|(송금|이체|인증)[했습니했]?)/i.test(
         message,
       );
 
@@ -166,7 +166,7 @@ function buildFields(raw: string): Record<string, string> {
           : "메시지 속 '고객님' 등 조직 발신자 표시가 있어 검증 전 상태로 둡니다.";
     } else if (
       // 먼저확인: 번호·계좌·연락처·채널을 바꾸지만 즉시중지 신호는 없음
-      /\b(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|계좌|새[번호전화]|이[번호번]|앞[으로]로|이제[부터는부터는]|연락[해다오세요])\b/i.test(
+      /(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|계좌|새[번호전화]|이[번호번]|앞[으로]로|이제[부터는부터는]|연락[해다오세요])/i.test(
         message,
       )
     ) {
@@ -206,21 +206,21 @@ function buildFields(raw: string): Record<string, string> {
     fields["확인할주장"] = "주어진 메시지가 없어 확인할 주장을 정리할 수 없습니다. 의심되는 메시지 원문을 넣어 주세요.";
   } else {
     const claimCandidates: string[] = [];
-    if (/\b(급[합니다]?|당장|지금|바로|오늘|병원비|입원|사고|사망|응급|수술|치료|약|빚|대출|상환|외상|돈|금액)\b/i.test(message))
+    if (/(급[합니다]?|당장|지금|바로|오늘|병원비|입원|사고|사망|응급|수술|치료|약|빚|대출|상환|외상|돈|금액)/i.test(message))
       claimCandidates.push("\"급함·금전 요구\" 주장");
-    if (/\b(아들|딸|엄마|아빠|부모|자녀|조카|친구|동료|선배|후배|가족|형|누나|오빠|언니|남동생|여동생|친척|지인)\b/i.test(message))
+    if (/(아들|딸|엄마|아빠|부모|자녀|조카|친구|동료|선배|후배|가족|형|누나|오빠|언니|남동생|여동생|친척|지인)/i.test(message))
       claimCandidates.push("\"관계·발신자\" 주장");
-    if (/\b(계좌|은행|입금|송금|이체|통장|금융|정산|수금|납부|결제|카드|현금)\b/i.test(message))
+    if (/(계좌|은행|입금|송금|이체|통장|금융|정산|수금|납부|결제|카드|현금)/i.test(message))
       claimCandidates.push("\"계좌·이체\" 주장");
-    if (/\b(비밀번호|인증번호|보안|인증|확인[번호코드]|본인[인증확인]|로그인|계정|아이디|OTP)\b/i.test(message))
+    if (/(비밀번호|인증번호|보안|인증|확인[번호코드]|본인[인증확인]|로그인|계정|아이디|OTP)/i.test(message))
       claimCandidates.push("\"자격증명·인증\" 요구");
-    if (/\b(https?:\/\/|www\.|링크|주소|url|클릭|열어|접속|방문)\b/i.test(message))
+    if (/(https?:\/\/|www\.|링크|주소|url|클릭|열어|접속|방문)/i.test(message))
       claimCandidates.push("\"링크·접속\" 요구");
-    if (/\b(설치|다운로드|실행|앱|프로그램|업데이트|백신|보안[프로그램앱]|보호[앱프로그램])\b/i.test(message))
+    if (/(설치|다운로드|실행|앱|프로그램|업데이트|백신|보안[프로그램앱]|보호[앱프로그램])/i.test(message))
       claimCandidates.push("\"설치·소프트웨어\" 요구");
-    if (/\b(원격|화면|제어|접속|연결|팀뷰어|AnyDesk|애니데스크|공유|보기|관찰|감시|해킹)\b/i.test(message))
+    if (/(원격|화면|제어|접속|연결|팀뷰어|AnyDesk|애니데스크|공유|보기|관찰|감시|해킹)/i.test(message))
       claimCandidates.push("\"원격접속·제어\" 요구");
-    if (/\b(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|새[번호전화]|이[번호번]|앞[으로]로)\b/i.test(message))
+    if (/(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|새[번호전화]|이[번호번]|앞[으로]로)/i.test(message))
       claimCandidates.push("\"연락처·채널 변경\" 주장");
     if (hasCustomerTitle)
       claimCandidates.push("\"'고객님' 등 조직 발신자 표시\" 주장");
@@ -241,11 +241,11 @@ function buildFields(raw: string): Record<string, string> {
       "메시지가 없어 확인 경로를 정할 수 없습니다. 의심되는 메시지 원문을 넣어 주세요.";
   } else {
     const hasFamily =
-      /\b(아들|딸|엄마|아빠|부모|자녀|가족|형|누나|오빠|언니|남동생|여동생|친척|조카)\b/i.test(
+      /(아들|딸|엄마|아빠|부모|자녀|가족|형|누나|오빠|언니|남동생|여동생|친척|조카)/i.test(
         message,
       );
     const hasOrg =
-      /\b(은행|카드사|통신사|택배|경찰서|법원|관공서|시청|구청|우체국|학교|회사|보험사|병원|법원|경찰|소방|정부|행정|세금|국세청|건강보험|연금)\b/i.test(
+      /(은행|카드사|통신사|택배|경찰서|법원|관공서|시청|구청|우체국|학교|회사|보험사|병원|법원|경찰|소방|정부|행정|세금|국세청|건강보험|연금)/i.test(
         message,
       );
 
@@ -286,9 +286,6 @@ function buildFields(raw: string): Record<string, string> {
 
   // 6. 판단이유
   fields["판단이유"] = branchReason;
-
-  // 반환 전 분기 정보 추가 (POST 핸들러에서 재추출 방지)
-  fields["_branch"] = branch;
 
   // 7. 하지말것
   if (branch === "즉시중지") {
