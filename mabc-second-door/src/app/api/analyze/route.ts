@@ -93,7 +93,7 @@ function buildFields(raw: string): Record<string, string> {
   const sanitized = sanitizeIdentifiers(message);
 
   // "고객님" 호칭 탐지 — 조직 발신자 표시 (보이스피싱 전형 패턴)
-  const hasCustomerTitle = /\b고객님|고객\s*님\b/i.test(message);
+  const hasCustomerTitle = /고객님|고객\s*님/i.test(message);
 
   // --- 분기 선택 (즉시중지 > 먼저확인 > 일반 > 입력필요) ---
   let branch: string;
@@ -281,8 +281,14 @@ function buildFields(raw: string): Record<string, string> {
       "\"읽어 봤다. 메시지 하나로 바로 결론 내리지 않고, 필요한 부분은 이미 알던 경로로 확인해 볼게.\"";
   }
 
+  // 반환 전 분기 정보 추가 — POST 핸들러에서 재추출하지 않도록
+  fields["_branch"] = branch;
+
   // 6. 판단이유
   fields["판단이유"] = branchReason;
+
+  // 반환 전 분기 정보 추가 (POST 핸들러에서 재추출 방지)
+  fields["_branch"] = branch;
 
   // 7. 하지말것
   if (branch === "즉시중지") {
@@ -337,18 +343,14 @@ export async function POST(request: NextRequest) {
     }
 
     const fields = buildFields(rawMessage);
-    const branch = fields["판단이유"].startsWith("메시지가 비어")
-      ? "입력필요"
-      : // 재계산 없이 재도출: buildFields가 이미 분기 결정
-        // 여기선 판단이유 앞부분을 보고 분기 재추출 (단순화)
-        (() => {
-          const reason = fields["판단이유"];
-          if (reason.includes("입력필요") || reason.startsWith("메시지가 비어"))
-            return "입력필요";
-          if (reason.includes("즉시중지")) return "즉시중지";
-          if (reason.includes("먼저확인")) return "먼저확인";
-          return "일반";
-        })();
+    const branch = fields._branch || (() => {
+      const reason = fields["판단이유"];
+      if (reason.includes("입력필요") || reason.startsWith("메시지가 비어"))
+        return "입력필요";
+      if (reason.includes("즉시중지")) return "즉시중지";
+      if (reason.includes("먼저확인")) return "먼저확인";
+      return "일반";
+    })();
 
     // 금지 패턴 검사 결과
     const prohibited = checkProhibitedOutput(fields);
