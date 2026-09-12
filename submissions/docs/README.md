@@ -13,14 +13,14 @@
 ## 무엇을 하는 서비스인가
 
 - 의심스러운 문자·카톡·이메일·메시지 내용을 텍스트로 붙여넣으면, 진위 판정 없이 **멈추고(이체·응답·링크·설치·원격접속을 하지 말고), 이미 알고 있던 경로로 확인하는 절차**를 정리한다.
-- 결과는 `검증전` 상태로固定되며, 메시지 진위를 판정하지 않는다.
+- 결과는 `검증전` 상태로 고정되며, 메시지 진위를 판정하지 않는다.
 - 예선 당선 스킬(**second-door / 두번째문**)의 규칙·출력 계약을 그대로 서비스 핵심 로직으로 이식했다.
 
 ## 제출물
 
 - **서비스 MVP 공개 URL (Vercel)**: [https://mabc-second-door.vercel.app](https://mabc-second-door.vercel.app)
 - **소스코드 저장소 (GitHub)**: [https://github.com/HUNMINRYU/mabc-second-door](https://github.com/HUNMINRYU/mabc-second-door)
-- **PRD (미니 제품 요구사항 문서)**: `service/PRD.md` (이 저장소 내부)
+- **PRD (미니 제품 요구사항 문서)**: `submissions/docs/prd.md` (이 저장소 내부)
 
 ## 핵심 기능 (데모에서 보여줄 것)
 
@@ -74,8 +74,16 @@ mabc-final_second_door/
 │   ├── package.json
 │   ├── next.config.ts
 │   └── tsconfig.json
-├── service/
-│   └── PRD.md                 # 미니 제품 요구사항 문서 (제출용)
+├── submissions/
+│   ├── docs/
+│   │   ├── README.md          # 이 파일 (제출용 개요)
+│   │   └── prd.md             # 미니 제품 요구사항 문서 (제출용)
+│   ├── presentation/
+│   │   └── presentation.html  # 발표 5장 (HTML)
+│   └── skill/
+│       ├── second-door.zip    # 예선 당선 스킬 원본
+│       └── extracted/
+│           └── SKILL.md       # 스킬 추출 마크다운
 └── ...
 ```
 
@@ -99,15 +107,53 @@ curl -s -X POST https://mabc-second-door.vercel.app/api/analyze \
   -d '{"message":"엄마 나 아들인데 갑자기 급전이 필요해서 그래. 지금 바로 80만원만 계좌번호 3333-12-345678로 보내줄 수 있어? 빨리 해줘."}'
 ```
 
-## 검증 (시크릿 창 / 키 미노출)
+## 검증 (시크릿 창 / 키 미노출) — 실제 출력
 
-아래 조건이 시크릿 창(저장값 없는 첫 방문) 기준으로 확인되었다.
+### 1) 페이지 접속 확인 (2026-09-13)
 
-- [x] 페이지 접속 시 안내 + 입력 폼이 먼저 보임
-- [x] POST `/api/analyze` 분석 동작 (7개 필드 응답)
+```bash
+$ curl -s -o /dev/null -w "%{http_code}\n" "https://mabc-second-door.vercel.app/"
+200
+```
+
+### 2) 페이지 제목 확인
+
+```bash
+$ curl -s "https://mabc-second-door.vercel.app/" | grep -o '<title>[^<]*</title>'
+<title>두번째문 — 의심 메시지 분석·확인 절차</title>
+```
+
+### 3) 공개 HTML에 API 키(up_) 포함 여부 — 0건
+
+```bash
+$ curl -s "https://mabc-second-door.vercel.app/" | grep -c "up_"
+0
+```
+
+### 4) API 건강 체크 (GET)
+
+```bash
+$ curl -s "https://mabc-second-door.vercel.app/api/analyze"
+{"service":"두번째문 (second-door) 분석 API","version":"0.1.0","note":"POST /api/analyze 에 { message: '...' } 로 요청"}
+```
+
+### 5) 시크릿 창 검증 (2026-09-13, ego-browser)
+
+시크릿 창(저장값 없는 첫 방문)에서 페이지 접속 확인:
+
+- 제목: "두번째문 — 의심 메시지 분석·확인 절차"
+- 안내 문구: "의심스러운 문자, 카톡, 이메일, 메시지 내용을 그대로 붙여넣어 주세요. 최소 한 줄 이상."
+- 예시 프리셋 4종 버튼: "아들 사칭 급전 메시지", "새 연락처로 바꾸라는 메시지", "이미 보냈으니 확인하라는 압박 메시지", "읽어볼 만한 의심 메시지 (일반)"
+- 분석하기 버튼 표시
+- localStorage 없이 첫 방문 기준으로도 정상 동작 확인
+
+### 검증 체크리스트
+
+- [x] 페이지 접속 시 안내 + 입력 폼이 먼저 보임 (위 5번 시크릿 창 확인)
+- [x] POST `/api/analyze` 분석 동작 (7개 필드 응답) — PRD 10) 실제 검증 출력 참조
 - [x] 식별자(가상 계좌번호 등)가 출력에 그대로 반복되지 않음
-- [x] `up_` API 키가 공개 HTML/클라이언트 소스에 노출되지 않음 (`curl -s <공개주소> | grep -c "up_"` → 0)
-- [x] 페이지 제목: `두번째문 — 의심 메시지 분석·확인 절차`
+- [x] `up_` API 키가 공개 HTML/클라이언트 소스에 노출되지 않음 (위 3번: 0건)
+- [x] 페이지 제목: `두번째문 — 의심 메시지 분석·확인 절차` (위 2번)
 
 ## 제외 범위
 

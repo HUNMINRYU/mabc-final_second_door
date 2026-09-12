@@ -92,6 +92,9 @@ function buildFields(raw: string): Record<string, string> {
   const message = raw.trim();
   const sanitized = sanitizeIdentifiers(message);
 
+  // "고객님" 호칭 탐지 — 조직 발신자 표시 (보이스피싱 전형 패턴)
+  const hasCustomerTitle = /\b고객님|고객\s*님\b/i.test(message);
+
   // --- 분기 선택 (즉시중지 > 먼저확인 > 일반 > 입력필요) ---
   let branch: string;
   let branchReason: string;
@@ -143,7 +146,8 @@ function buildFields(raw: string): Record<string, string> {
       hasLinkInstall ||
       hasRemote ||
       hasSecretPressure ||
-      hasActionDone
+      hasActionDone ||
+      hasCustomerTitle
     ) {
       branch = "즉시중지";
       const reasons: string[] = [];
@@ -153,7 +157,13 @@ function buildFields(raw: string): Record<string, string> {
       if (hasRemote) reasons.push("원격접속·제어 요구");
       if (hasSecretPressure) reasons.push("비밀·급한 압박");
       if (hasActionDone) reasons.push("이미 행동이 있었을 가능성");
-      branchReason = reasons.join("·") + "이(가) 있어 검증 전 상태로 둡니다.";
+      if (hasCustomerTitle) reasons.push("'고객님' 등 조직 발신자 표시 및 계좌·송금 요구");
+
+      // reasons가 비어있으면 hasCustomerTitle 전용 텍스트로 폴백
+      branchReason =
+        reasons.length > 0
+          ? reasons.join("·") + "이(가) 있어 검증 전 상태로 둡니다."
+          : "메시지 속 '고객님' 등 조직 발신자 표시가 있어 검증 전 상태로 둡니다.";
     } else if (
       // 먼저확인: 번호·계좌·연락처·채널을 바꾸지만 즉시중지 신호는 없음
       /\b(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|계좌|새[번호전화]|이[번호번]|앞[으로]로|이제[부터는부터는]|연락[해다오세요])\b/i.test(
@@ -212,6 +222,8 @@ function buildFields(raw: string): Record<string, string> {
       claimCandidates.push("\"원격접속·제어\" 요구");
     if (/\b(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|새[번호전화]|이[번호번]|앞[으로]로)\b/i.test(message))
       claimCandidates.push("\"연락처·채널 변경\" 주장");
+    if (hasCustomerTitle)
+      claimCandidates.push("\"'고객님' 등 조직 발신자 표시\" 주장");
 
     if (claimCandidates.length === 0) {
       fields["확인할주장"] =
