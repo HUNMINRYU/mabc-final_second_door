@@ -37,3 +37,7 @@ tmp/
 
 # Optional: keep .npmrc local-only (allowScripts 등)
 # .npmrc
+
+# === 제출용 정리: 로컬 전용 자료 (git 추적 제외) ===
+scripts/
+reference/
