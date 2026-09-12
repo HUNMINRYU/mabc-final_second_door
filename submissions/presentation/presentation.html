@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: 10in 5.625in; margin: 0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .slide {
+    width: 10in; height: 5.625in; position: relative; overflow: hidden;
+    page-break-after: always;
+    background: #192129;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  :root {
+    --bg-deep: #192129;
+    --bg-card: #222c38;
+    --bg-card2: #293241;
+    --fg: #eef1f5;
+    --fg-muted: #a8b4c4;
+    --fg-dim: #6f7d91;
+    --accent: #8F72E6;
+    --accent2: #7FF79D;
+    --warn: #e85d5d;
+  }
+
+  .slide-header { position:absolute; top:0; left:0; right:0; height:0.16in; background:var(--accent); }
+  .slide-footer {
+    position:absolute; bottom:0.09in; left:0.4in; right:0.4in;
+    display:flex; justify-content:space-between; align-items:center;
+    color:var(--fg-dim); font-size:9pt;
+    border-top:1px solid #2f3a4a; padding-top:5pt;
+  }
+  .footer-pagenum { color:var(--accent); font-weight:700; letter-spacing:1px; }
+
+  /* 표지 */
+  .cover {
+    background: radial-gradient(ellipse at 50% 28%, #2c3a4d 0%, #192129 65%, #0f141b 100%);
+    display:flex; flex-direction:column; justify-content:center;
+    padding:0.95in 1.05in;
+  }
+  .cover .mark-line {
+    width:90px; height:4px; background:var(--accent2);
+    border-radius:2px; margin-bottom:24px;
+    box-shadow:0 0 16px rgba(127,247,157,0.35);
+  }
+  .cover h1 {
+    font-size:60pt; font-weight:800; color:#fff;
+    letter-spacing:-0.02em; line-height:1.05;
+  }
+  .cover .subtitle {
+    margin-top:16px; font-size:18pt; color:var(--fg-muted);
+    line-height:1.55; max-width:7.5in; font-weight:500;
+  }
+  .cover .subtitle strong { color:#fff; font-weight:700; }
+  .cover .lower { position:absolute; bottom:0.8in; left:1.05in; right:1.05in; }
+  .cover .tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .cover .tag {
+    background:var(--accent); color:#fff; padding:5pt 12pt;
+    border-radius:20pt; font-size:10.5pt; font-weight:700;
+  }
+  .cover .tag.green { background:var(--accent2); color:#16232e; }
+  .cover .tag.gray { background:#2f3a4a; color:var(--fg-muted); }
+  .cover .links { font-size:12pt; color:var(--fg-dim); line-height:1.85; }
+  .cover .links a { color:var(--accent2); text-decoration:none; font-weight:600; }
+  .cover .links strong { color:var(--fg); font-weight:700; }
+
+  /* 본문 */
+  .body { padding:0.5in 0.7in 0.5in; display:flex; flex-direction:column; justify-content:space-between; }
+  .body .eyebrow {
+    font-size:9.5pt; color:var(--accent); font-weight:700;
+    letter-spacing:2px; margin-bottom:5px; text-transform:uppercase;
+  }
+  .body h2 {
+    font-size:30pt; font-weight:800; color:#fff;
+    letter-spacing:-0.015em; line-height:1.15;
+  }
+  .body .subtitle {
+    margin-top:7px; font-size:13pt; color:var(--fg-muted);
+    line-height:1.5; max-width:8.4in;
+  }
+  .body .subtitle strong { color:var(--fg); }
+
+  .card {
+    background:var(--bg-card); border:1px solid #2f3a4a;
+    border-radius:8pt; padding:13pt 15pt; margin-bottom:10pt;
+  }
+  .card.accent { border-left:4px solid var(--accent); }
+  .card.green { border-left:4px solid var(--accent2); }
+  .card.warn { border-left:4px solid var(--warn); }
+  .card h3 {
+    font-size:12.5pt; color:#fff; font-weight:700; margin-bottom:6pt;
+  }
+  .card p, .card li { color:var(--fg-muted); font-size:11pt; line-height:1.5; }
+  .card .lead { color:#fff; font-weight:700; }
+
+  ul { padding-left:16pt; color:var(--fg-muted); font-size:11pt; line-height:1.5; }
+  ul li { margin-bottom:5pt; }
+  ul li::marker { color:var(--accent); }
+
+  .badges { display:flex; gap:7pt; flex-wrap:wrap; margin-top:6pt; }
+  .badge {
+    padding:4pt 11pt; border-radius:20pt; font-size:10pt; font-weight:700;
+  }
+  .badge.d1 { background:var(--warn); color:#fff; }
+  .badge.d2 { background:#f1a04a; color:#201a14; }
+  .badge.d3 { background:var(--accent2); color:#16232e; }
+  .badge.d4 { background:#2f3a4a; color:var(--fg-muted); }
+
+  .row { display:flex; gap:14pt; }
+  .row > div { flex:1; }
+  .row .wider { flex:1.35; }
+
+  table { width:100%; border-collapse:collapse; margin:5pt 0 2pt; }
+  th { background:var(--accent); color:#fff; padding:6pt 8pt; font-size:10pt; font-weight:700; text-align:left; }
+  td { background:var(--bg-card2); color:var(--fg-muted); padding:6pt 8pt; font-size:10pt; border-top:1px solid #2f3a4a; }
+  tr:nth-child(even) td { background:#242d39; }
+
+  .step-list { margin-top:5pt; }
+  .step {
+    display:flex; align-items:flex-start; margin-bottom:7pt;
+    color:var(--fg-muted); font-size:11pt; line-height:1.5;
+  }
+  .step .n {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22pt; height:22pt; background:var(--accent); color:#fff;
+    border-radius:50%; font-size:10.5pt; font-weight:700; margin-right:9pt; flex-shrink:0;
+  }
+
+  .check { color:var(--accent2); font-weight:700; }
+  .mono { font-family:'Noto Sans Mono','Courier New',monospace; font-size:10pt; color:var(--fg-muted); }
+  .codebox {
+    background:#151b22; border:1px solid #2f3a4a; border-radius:6pt;
+    padding:7pt 9pt; color:#cdd6e2; font-size:10pt; line-height:1.5;
+    white-space:pre-wrap;
+  }
+  .small { font-size:10pt; color:var(--fg-dim); }
+  .quote { color:var(--accent2); font-weight:700; }
+  .warn-text { color:var(--warn); font-weight:700; }
+  .dots { position:absolute; top:0.2in; right:0.5in; font-size:9pt; color:var(--fg-dim); letter-spacing:3px; }
+</style>
+</head>
+<body>
+
+<!-- ============ 슬라이드 1: 표지 ============ -->
+<section class="slide cover">
+  <div class="mark-line"></div>
+  <h1>두번째문</h1>
+  <p class="subtitle">의심 메시지를 받으면, 판단 대신<br><strong>멈추고 확인하는 절차</strong>를 정리해 주는 웹 서비스</p>
+  <div class="lower">
+    <div class="tags">
+      <span class="tag">규칙 기반</span>
+      <span class="tag green">키 없이 동작</span>
+      <span class="tag gray">시크릿 창 검증 완료</span>
+      <span class="tag gray">up_ 키 0건</span>
+    </div>
+    <div class="links">
+      <strong>MABC 2026 결선 제출 · Skill to Service</strong><br>
+      서비스: <a href="https://mabc-second-door.vercel.app">https://mabc-second-door.vercel.app</a><br>
+      코드: <a href="https://github.com/HUNMINRYU/mabc-second-door">github.com/HUNMINRYU/mabc-second-door</a>
+    </div>
+  </div>
+  <div class="dots">● ○ ○ ○ ○</div>
+  <div class="slide-footer">
+    <span>두번째문 — 의심 메시지 분석·확인 절차 서비스</span>
+    <span class="footer-pagenum">01 / 05</span>
+  </div>
+</section>
+
+<!-- ============ 슬라이드 2: 문제 + 트리거 ============ -->
+<section class="slide">
+  <div class="slide-header"></div>
+  <div class="dots">○ ● ○ ○ ○</div>
+  <div class="body">
+    <div>
+      <div class="eyebrow">01 · 문제 정의</div>
+      <h2>문제</h2>
+      <p class="subtitle">메시지 하나로 "진짜일까?"를 판단하려다<br><span class="warn-text">이체·자격증명 입력·링크 방문·설치·원격접속</span>을 바로 해버린다.</p>
+    </div>
+    <div style="margin-top:14pt;">
+      <div class="card warn">
+        <h3>이 서비스가 하지 않는 것 / 하는 것</h3>
+        <div class="row">
+          <div style="flex:1;">
+            <ul>
+              <li>사용자는 "안전하다/사기다" 같은 <span class="warn-text">진위 판정</span>을 기대하지만, 이 서비스는 판정하지 않는다.</li>
+              <li>메시지에 포함된 번호·계좌·URL을 <span class="warn-text">그대로 믿고 반복</span>하게 된다.</li>
+            </ul>
+          </div>
+          <div style="flex:1;">
+            <ul>
+              <li>급한 압박을 받으면 <span class="quote">이미 알고 있던 경로(저장된 번호 등)로 확인할 생각</span>을 못 한다.</li>
+              <li>특히 부모·가족 관계에서 "자녀/지인이 급하다"며 계좌·링크·번호 변경을 요구하는 메시지일 때, 중장년층·디지털 문해력이 높지 않은 사람이 위험에 노출된다.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="card accent">
+        <h3>언제 쓰는가 (트리거)</h3>
+        <div class="step-list">
+          <div class="step"><span class="n">1</span><span>의심스러운 문자·카톡·이메일·메시지를 받았다.</span></div>
+          <div class="step"><span class="n">2</span><span>"이거 어떻게 해야 하지?" 하는 순간, URL로 접속해 메시지를 붙여넣는다.</span></div>
+          <div class="step"><span class="n">3</span><span>분석 버튼을 누르면, 판단 대신 <span class="quote">멈추고 확인하는 절차</span>가 정리되어 나온다.</span></div>
+        </div>
+        <p class="small" style="margin-top:5pt;">= 불러 쓰는(on-demand) 서비스. 알림·공유 링크은 P1. 별도 로그인·키 입력 없음.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>문제 정의 · 트리거 (WHO/WHEN)</span>
+    <span class="footer-pagenum">02 / 05</span>
+  </div>
+</section>
+
+<!-- ============ 슬라이드 3: 핵심 기능 ============ -->
+<section class="slide">
+  <div class="slide-header"></div>
+  <div class="dots">○ ○ ● ○ ○</div>
+  <div class="body">
+    <div>
+      <div class="eyebrow">02 · 해결 방식</div>
+      <h2>핵심 기능</h2>
+      <p class="subtitle">메시지를 붙여넣으면 <strong>7개 필드</strong>가 순서대로 나온다.<br>분기와 금지 패턴, 예시까지 한 화면에서 보여준다.</p>
+    </div>
+    <div style="margin-top:12pt;">
+      <div class="row">
+        <div class="wider card" style="background:#222c38;">
+          <h3>① 메시지 입력 → 7개 필드 출력</h3>
+          <table style="background:#222c38;">
+            <tr><th>#</th><th>필드</th></tr>
+            <tr><td>1</td><td>상태</td></tr>
+            <tr><td>2</td><td>중단조치</td></tr>
+            <tr><td>3</td><td>확인할주장</td></tr>
+            <tr><td>4</td><td>독립확인</td></tr>
+            <tr><td>5</td><td>답장예시</td></tr>
+            <tr><td>6</td><td>판단이유</td></tr>
+            <tr><td>7</td><td>하지말것</td></tr>
+          </table>
+          <p class="small" style="margin-top:5pt;">입력은 텍스트 영역 하나. 출력 결과는 받은 사람이 바로 이해할 수 있게 카드 형태로 표시.</p>
+        </div>
+        <div style="flex:1;">
+          <div class="card" style="margin-bottom:10pt;">
+            <h3>② 분기 표시 + 판단이유</h3>
+            <p>내부 분기 <strong style="color:#fff;">즉시중지 &gt; 먼저확인 &gt; 일반 &gt; 입력필요</strong>를 상단 뱃지로 보여주고, 판단 근거로 <strong>판단이유</strong>를 표시한다.</p>
+            <div class="badges" style="margin-top:6pt;">
+              <span class="badge d1">⚠ 즉시중지</span>
+              <span class="badge d2">🔍 먼저확인</span>
+              <span class="badge d3">📄 일반</span>
+              <span class="badge d4">✏️ 입력필요</span>
+            </div>
+          </div>
+          <div class="card green">
+            <h3>③ 금지 패턴 검사 결과</h3>
+            <p>출력에 아래 내용이 포함되지 않도록 검사하고, 걸렀음을 보여준다.</p>
+            <ul>
+              <li><span class="warn-text">사기·진짜·가짜·안전 판정, 점수/확률/%, 긴급번호 숫자</span></li>
+              <li>제공된 식별자(번호·계좌·링크) 반복</li>
+              <li>복구·환불·배상·보장 약속</li>
+              <li>자격증명 입력·링크 열기·이체·설치·원격접속 등</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="background:#222c38;">
+        <h3>④ 예시 프리셋 데모</h3>
+        <p style="color:var(--fg-muted);font-size:11pt;line-height:1.5;margin-bottom:6pt;">버튼 하나로 예시 메시지를 넣고 바로 분석 결과를 시연할 수 있다.</p>
+        <div class="badges">
+          <span class="badge d1">아들 급전(계좌) → 즉시중지</span>
+          <span class="badge d2">새 연락처 변경 → 먼저확인</span>
+          <span class="badge d1">이미 보냄 압박 → 즉시중지</span>
+          <span class="badge d3">일반 의심 → 일반</span>
+          <span class="badge d4">빈 메시지 → 입력필요</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>핵심 기능 · P0 (최대 4개)</span>
+    <span class="footer-pagenum">03 / 05</span>
+  </div>
+</section>
+
+<!-- ============ 슬라이드 4: 스킬 매핑 + 기술 ============ -->
+<section class="slide">
+  <div class="slide-header"></div>
+  <div class="dots">○ ○ ○ ● ○</div>
+  <div class="body">
+    <div>
+      <div class="eyebrow">03 · 스킬 매핑 · 기술</div>
+      <h2>예선 스킬을 서비스 로직으로</h2>
+      <p class="subtitle">예선 당선 스킬 <strong>second-door (두번째문)</strong>을 서비스 핵심 로직으로 그대로 이식했다.<br>Solar Pro 4 API 키 <span class="quote">없이</span> 동작한다.</p>
+    </div>
+    <div style="margin-top:12pt;">
+      <div class="row">
+        <div class="wider card" style="background:#222c38;">
+          <h3>예선 스킬 → 서비스 로직 매핑</h3>
+          <table style="background:#222c38;">
+            <tr><th>기능</th><th>사용 스킬</th><th>비고</th></tr>
+            <tr>
+              <td>7개 필드 생성 + 분기 선택 + 금지 패턴 검사</td>
+              <td><strong style="color:var(--accent);">second-door</strong></td>
+              <td>예선 스킬을 서비스 핵심 로직으로 이식. <span class="mono">/api/analyze</span> 서버리스 함수가 스킬의 데이터 경로(분기 규칙·출력 계약·금지 패턴)를 그대로 구현</td>
+            </tr>
+            <tr>
+              <td>판단이유 문장 보강(선택·P1)</td>
+              <td>Solar Pro 4 (Upstage)</td>
+              <td>키를 쓰면 더 자연스러운 문장 생성. 키 없으면 규칙 기반 문장으로만 동작</td>
+            </tr>
+          </table>
+          <p style="margin-top:7pt;color:var(--accent2);font-weight:700;font-size:11pt;">핵심 원칙: 예선 당선 스킬이 서비스 핵심 로직에 필수 포함. 서비스화를 위한 수정·확장은 허용.</p>
+        </div>
+        <div style="flex:1;">
+          <div class="card" style="margin-bottom:10pt;">
+            <h3>기술 스택</h3>
+            <ul>
+              <li>Next.js 16 (App Router) + React 19 + TypeScript</li>
+              <li>Vercel 배포 (서버리스 API Route <span class="mono">/api/analyze</span>)</li>
+              <li>규칙 기반 로직 — <span class="quote">키 없이 동작</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>API</h3>
+            <div class="codebox" style="margin-top:4pt;">GET  /api/analyze   — 서비스 정보 (건강 체크)<br>
+POST /api/analyze   — {"message":"..."} → 7개 필드 응답</div>
+            <p class="small" style="margin-top:4pt;">예:<br>
+<span class="mono">curl -X POST https://mabc-second-door.vercel.app/api/analyze</span><br>
+<span class="mono"> -H "Content-Type: application/json"</span><br>
+<span class="mono"> -d '{"message":"..."}'</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="card accent">
+        <h3>규칙/계약 (결선 규정 반영)</h3>
+        <ul>
+          <li><strong>LLM</strong>: Solar Pro 4 전용. 타 LLM(Claude, GPT 등) 사용하지 않음.</li>
+          <li><strong>키 정책</strong>: 기본 동작은 키 없이 동작. Solar 호출 보강(P1)은 선택 사항이며, 키는 Vercel 환경변수에만 — 화면 코드·응답 JSON·클라이언트 소스에 절대 노출되지 않음.</li>
+          <li><strong>출력 계약</strong>: 진위 판정, 점수/확률/%, 식별자 반복, 긴급·기관 번호 숫자 제시, 복구·환불·배상 보장 하지 않음.</li>
+          <li><strong>MCP/데이터</strong>: MCP 허용, 저작권 범위 내 데이터는 활용 가능.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>스킬 매핑 · 기술 · 규칙</span>
+    <span class="footer-pagenum">04 / 05</span>
+  </div>
+</section>
+
+<!-- ============ 슬라이드 5: 검증 + 임팩트 + 제출물 ============ -->
+<section class="slide">
+  <div class="slide-header"></div>
+  <div class="dots">○ ○ ○ ○ ●</div>
+  <div class="body">
+    <div>
+      <div class="eyebrow">04 · 검증 · 임팩트</div>
+      <h2>검증 + 임팩트</h2>
+      <p class="subtitle">시크릿 창에서 별도 로그인 없이 안내 → 분석이 동작한다.<br>메시지 진위를 판정하지 않고, <span class="quote">이미 알고 있던 경로로 확인하는 절차</span>를 손에 쥐게 한다.</p>
+    </div>
+    <div style="margin-top:12pt;">
+      <div class="row">
+        <div class="wider card green" style="background:#222c38;">
+          <h3>시크릿 창 검증 완료</h3>
+          <table style="background:#222c38;">
+            <tr><th>항목</th><th style="text-align:right;">결과</th></tr>
+            <tr><td>페이지 접속 시 안내 + 입력 폼 먼저 보임</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+            <tr><td>POST /api/analyze 7개 필드 응답</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+            <tr><td>계좌 식별자 미반복 ("메시지 속 계좌"로만)</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+            <tr><td>"안전/사기/진짜/가짜"·점수/%·긴급번호 없음</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+            <tr><td>복구·환불·배상 보장 없음</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+            <tr><td>up_ 키 0건 (공개 HTML)</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+            <tr><td>시크릿 창 재방문 안내→분석 동작</td><td style="text-align:right;"><span class="check">✅</span></td></tr>
+          </table>
+        </div>
+        <div style="flex:1;">
+          <div class="card" style="margin-bottom:10pt;">
+            <h3>데모 시연 흐름 (3분)</h3>
+            <div class="step-list">
+              <div class="step"><span class="n">1</span><span><strong>아들 사칭 급전 메시지</strong> → 즉시중지 + 7개 필드 + 계좌 식별자가 "메시지 속 계좌"로만 표시</span></div>
+              <div class="step"><span class="n">2</span><span><strong>새 연락처로 바꾸라는 메시지</strong> → 먼저확인</span></div>
+              <div class="step"><span class="n">3</span><span><strong>빈 메시지</strong> → "메시지가 필요합니다" 안내 + 입력필요</span></div>
+              <div class="step"><span class="n">4</span><span><strong>시크릿 창 재방문</strong> → 별도 로그인 없이 안내 → 분석</span></div>
+              <div class="step"><span class="n">5</span><span><strong>검증 포인트</strong>: 식별자 미유출, up_ 키 0건, 금지 패턴 없음</span></div>
+            </div>
+          </div>
+          <div class="card" style="background:#222c38;">
+            <h3>제출물</h3>
+            <p style="color:var(--fg-muted);font-size:11pt;line-height:1.6;margin-bottom:4pt;">
+              서비스: <a href="https://mabc-second-door.vercel.app" style="color:var(--accent2);text-decoration:none;font-weight:600;">mabc-second-door.vercel.app</a><br>
+              코드: <a href="https://github.com/HUNMINRYU/mabc-second-door" style="color:var(--accent2);text-decoration:none;font-weight:600;">github.com/HUNMINRYU/mabc-second-door</a><br>
+              PRD 2쪽 · A1 포스터 · 발표 PDF 5장 · 데모 MP4 3분
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span>검증 · 임팩트 · 제출물</span>
+    <span class="footer-pagenum">05 / 05</span>
+  </div>
+</section>
+
+</body>
+</html>
