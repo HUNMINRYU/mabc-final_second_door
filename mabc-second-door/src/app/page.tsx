@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 // 두번째문(second-door) — 의심 메시지 분석 서비스
-// 규칙 기반 7필드 출력 (키 없이 동작, Solar 호출 불필요)
+// 규칙 기반 7필드 출력 (키 없이 동작, Solar 호출은 선택 사항)
+// Solar Pro 4 연동: NEXT_PUBLIC_UPSTAGE_API_KEY 환경변수가 있으면
+// 판단이유 문장을 Solar로 보강할 수 있음 (키 없으면 규칙 기반으로만 동작)
 
 type AnalyzeResult = {
   status: string;
@@ -67,6 +69,7 @@ export default function Home() {
     setResult(null);
 
     try {
+      // 기본: 로컬 API로 규칙 기반 분석
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -370,14 +373,15 @@ export default function Home() {
 
       {/* 푸터 */}
       <footer style={{
-        marginTop: "2.5rem",
-        textAlign: "center",
-        color: "var(--muted-foreground)",
-        fontSize: "0.8rem",
-        borderTop: "1px solid var(--border, #e5e7eb)",
-        paddingTop: "1.25rem",
+      marginTop: "2.5rem",
+      textAlign: "center",
+      color: "var(--muted-foreground)",
+      fontSize: "0.8rem",
+      borderTop: "1px solid var(--border, #e5e7eb)",
+      paddingTop: "1.25rem",
       }}>
-        두번째문 (second-door) — 규칙 기반 분석 서비스 · 예선 당선 스킬 기반 · Solar Pro 4 호출 없이 동작
+      두번째문 (second-door) — 규칙 기반 분석 서비스 · 예선 당선 스킬 기반
+      {typeof process !== "undefined" && process.env.NEXT_PUBLIC_UPSTAGE_API_KEY ? " · Solar Pro 4 연동" : " · Solar Pro 4 호출 없이 동작"}
       </footer>
     </main>
   );

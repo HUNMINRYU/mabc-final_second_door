@@ -42,6 +42,15 @@ function sanitizeIdentifiers(text: string): string {
     return "[코드]";
   });
 
+  // 경찰청·금감원 공개 사례에서 자주 등장하는 suspicious 패턴 보강
+  // "고객님" 호칭 + 계좌/송금 요구 조합 (보이스피싱 전형)
+  if (/\b고객님|고객\s*님\b/i.test(text)) {
+    s = s.replace(
+      /\b(고객님|고객\s*님)\b/gi,
+      "[발신자 표시]",
+    );
+  }
+
   return s;
 }
 
