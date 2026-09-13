@@ -258,13 +258,15 @@ export default function Home() {
           </div>
           <textarea
             id="message"
+            name="message"
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="의심스러운 문자, 카톡, 이메일, 메시지 내용을 그대로 붙여넣어 주세요. 최소 한 줄 이상."
+            placeholder="예: 아들 사칭 급전, 새 연락처 변경, 회의 안내 메시지 등 — 의심 내용을 그대로 붙여넣어 주세요. 최소 한 줄 이상…"
             rows={6}
             className="message-input"
             aria-describedby="message-hint"
+            autoComplete="off"
           />
           <span id="message-hint" className="text-tiny">
             최소 한 줄 이상의 의심 메시지 원문을 넣어 주세요.

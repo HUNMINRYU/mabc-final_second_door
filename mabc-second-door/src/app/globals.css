@@ -558,8 +558,17 @@ strong { color: inherit; }
 }
 
 /* ============================================================
-   Skip Link
+   접근성: 축소 운동 선호자용 애니메이션 제어
    ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 .toast-container {
   position: fixed;
   top: 1.5rem;
