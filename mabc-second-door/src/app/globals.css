@@ -367,12 +367,131 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-/* 필드 레이블/값 가독성 보강 */
+/* 필드 레이블/값 가독성 보강 — 결과 카드용 */
 .field-label {
   font-size: 0.8rem;
+  font-weight: 700;
   letter-spacing: 0.01em;
+  color: var(--muted-foreground);
+  margin-bottom: 0.35rem;
 }
 
 .field-value {
+  font-size: 1rem;
   line-height: 1.7;
+  color: var(--foreground);
+  white-space: pre-wrap;
+}
+
+/* 결과 카드 섹션 */
+.result-card {
+  overflow: hidden;
+  margin-bottom: 1.75rem;
+}
+
+/* 결과 카드 내부 레이아웃 */
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.result-head--error {
+  background: var(--error-surface);
+}
+
+.result-head--warning {
+  background: var(--warning-surface);
+}
+
+.result-head--muted {
+  background: var(--muted-foreground);
+}
+
+.result-head--success {
+  background: var(--success-surface);
+}
+
+.result-branch-badge {
+  border: 1px solid;
+}
+
+.result-meta {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.result-timestamp {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.field-list {
+  padding: 1.5rem;
+}
+
+.field-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.field-row:last-child {
+  border-bottom: none;
+}
+
+.prohibited-box {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+}
+
+.prohibited-box--error {
+  background: var(--error-surface);
+  border: 1px solid var(--error-border);
+  color: var(--error-foreground);
+}
+
+.prohibited-box--success {
+  background: var(--success-surface);
+  border: 1px solid var(--success-border);
+  color: var(--success-foreground);
+}
+
+.prohibited-box-title {
+  margin: 0 0 0.25rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.prohibited-box-text {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.result-notice {
+  padding: 0.85rem 1.5rem;
+  background: var(--muted);
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--card-foreground);
+  line-height: 1.55;
+}
+
+/* 스킵 링크 */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 1rem;
 }

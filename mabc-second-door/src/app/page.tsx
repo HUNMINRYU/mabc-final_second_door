@@ -112,8 +112,12 @@ export default function Home() {
     (result.prohibited.length > 0 &&
       result.prohibited[0] !== "없음 — 출력이 금지 패턴 규칙을 위반하지 않습니다.");
 
+  const resultHeadClass = `result-head result-head--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`;
+  const prohibitedBoxClass = `prohibited-box prohibited-box--${prohibitedSummary ? "error" : "success"}`;
+
   return (
     <main className="container">
+      <a href="#main-content" className="skip-link">본문으로 이동</a>
       {/* 헤더 */}
       <header style={{ textAlign: "center", marginBottom: "2.5rem" }}>
         <h1 className="title">두번째문</h1>
@@ -147,7 +151,11 @@ export default function Home() {
             placeholder="의심스러운 문자, 카톡, 이메일, 메시지 내용을 그대로 붙여넣어 주세요. 최소 한 줄 이상."
             rows={6}
             className="message-input"
+            aria-describedby="message-hint"
           />
+          <span id="message-hint" className="text-tiny">
+            최소 한 줄 이상의 의심 메시지 원문을 넣어 주세요.
+          </span>
 
           <div className="chip-row">
             <div className="chip-group">
@@ -177,7 +185,9 @@ export default function Home() {
               {loading ? "분석 중…" : "분석하기"}
             </button>
             {error && (
-              <p className="alert alert--error">{error}</p>
+              <p id="analyze-error" className="alert alert--error" role="alert">
+                {error}
+              </p>
             )}
           </div>
         </form>
@@ -186,30 +196,12 @@ export default function Home() {
       {/* 결과 */}
       {result && (
         <section
+          id="main-content"
           className="card"
-          style={{
-            overflow: "hidden",
-            marginBottom: "1.75rem",
-          }}
+          aria-live="polite"
         >
           {/* 결과 헤더 (분기 뱃지) */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "1rem 1.5rem",
-              background:
-                result.branch === "즉시중지"
-                  ? "var(--error-surface)"
-                  : result.branch === "먼저확인"
-                  ? "var(--warning-surface)"
-                  : result.branch === "입력필요"
-                  ? "var(--muted-foreground)"
-                  : "var(--success-surface)",
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
+          <div className={resultHeadClass}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span
                 className="badge"
@@ -243,17 +235,17 @@ export default function Home() {
               >
                 {result.branchLabel}
               </span>
-              <span style={{ color: "var(--muted-foreground)", fontSize: "0.85rem" }}>
+              <span className="result-meta">
                 {result.status}
               </span>
             </div>
-            <span style={{ fontSize: "0.75rem", color: "var(--muted-foreground)" }}>
+            <span className="result-timestamp">
               {new Date(result.timestamp).toLocaleString("ko-KR")}
             </span>
           </div>
 
           {/* 7개 필드 */}
-          <div style={{ padding: "1.5rem" }}>
+          <div className="field-list">
             <dl style={{ display: "grid", gap: "1rem" }}>
               {([
                 ["상태", "status"],
@@ -266,7 +258,7 @@ export default function Home() {
               ] as const).map(([labelKey, fieldKey]) => (
                 <div
                   key={fieldKey}
-                  style={{ borderBottom: "1px solid var(--border)" }}
+                  className="field-row"
                 >
                   <dt className="field-label">{labelKey}</dt>
                   <dd className="field-value">{result.fields[fieldKey]}</dd>
@@ -275,26 +267,10 @@ export default function Home() {
             </dl>
 
             {/* 금지 패턴 표시 */}
-            <div
-              className="alert"
-              style={{
-                marginTop: "1.25rem",
-                padding: "0.85rem 1rem",
-                borderRadius: "var(--radius)",
-                background: prohibitedSummary
-                  ? "var(--error-surface)"
-                  : "var(--success-surface)",
-                border: "1px solid",
-                borderColor: prohibitedSummary
-                  ? "var(--error-border)"
-                  : "var(--success-border)",
-              }}
-            >
+            <div className={prohibitedBoxClass}>
               <p
+                className="prohibited-box-title"
                 style={{
-                  margin: "0 0 0.25rem",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
                   color: prohibitedSummary
                     ? "var(--error-foreground)"
                     : "var(--success-foreground)",
@@ -303,9 +279,8 @@ export default function Home() {
                 {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
               </p>
               <p
+                className="prohibited-box-text"
                 style={{
-                  margin: 0,
-                  fontSize: "0.9rem",
                   color: prohibitedSummary
                     ? "var(--error-foreground)"
                     : "var(--success-foreground)",
@@ -317,18 +292,9 @@ export default function Home() {
           </div>
 
           {/* 안내문 */}
-          <div
-            style={{
-              padding: "0.85rem 1.5rem",
-              background: "var(--muted-foreground)",
-              borderTop: "1px solid var(--border)",
-              fontSize: "0.85rem",
-              color: "var(--muted-foreground)",
-              lineHeight: 1.5,
-            }}
-          >
+          <p className="result-notice">
             {result.notice}
-          </div>
+          </p>
         </section>
       )}
 
