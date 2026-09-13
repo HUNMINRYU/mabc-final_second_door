@@ -118,323 +118,255 @@ p { line-height: 1.7; }
 
 .title {
   font-family: "Manrope", "Noto Sans KR", system-ui, sans-serif;
-  font-size: clamp(2.25rem, 4vw, 3rem);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.1;
   color: var(--ink-navy);
-  margin: 0 0 0.5rem;
+  margin: 0;
 }
 
 .subtitle {
-  font-family: "Manrope", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 1.25rem;
   color: var(--muted-foreground);
-  font-size: 1.125rem;
-  line-height: 1.65;
-  margin: 0 0 1.5rem;
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+  max-width: 48ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.strong-inherit { color: var(--ink-navy); font-weight: 700; }
+
+/* ---------- 필 그룹 (pill) ---------- */
+.pill-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  flex-wrap: wrap;
+}
+
+.pill-dot { color: var(--mist); }
+
+/* ---------- 카드 ---------- */
+.card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+  overflow: hidden;
+}
+
+.card + .card { margin-top: 1.75rem; }
+
+/* ---------- 입력 필드 ---------- */
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem 0.5rem;
+  gap: 1rem;
+}
+
+.field-label {
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.message-input {
+  display: block;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--pebble);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: "Manrope", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.message-input::placeholder {
+  color: var(--mist);
   font-weight: 400;
 }
 
 .text-tiny {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-.text-small {
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-  line-height: 1.55;
-  font-weight: 500;
-}
-
-.text-body {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: var(--foreground);
-  font-weight: 400;
-}
-
-.text-muted-body {
-  color: var(--muted-foreground);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  font-weight: 400;
-}
-
-.pill-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0 2rem;
   font-size: 0.8125rem;
-  background: var(--card);
-  border: 1px solid var(--pebble);
-  border-radius: 999px;
-  padding: 0.375rem 0.875rem;
-  color: var(--ink-navy);
-  font-weight: 500;
-}
-
-.pill-dot {
-  opacity: 0.4;
   color: var(--muted-foreground);
 }
 
-.meta-text {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  font-weight: 500;
-}
-
-/* ---------- 카드 / 표면 (16px 라운드 + 삼중 쉐도우) ---------- */
-.card {
-  background: var(--card);
-  border: 1px solid var(--pebble);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-}
-
-/* ---------- 뱃지 ---------- */
-.badge {
-  display: inline-flex;
+/* ---------- 칩 (예시 메시지 선택) ---------- */
+.chip-row {
+  display: flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 0.2rem 0.7rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  white-space: nowrap;
-  line-height: 1.4;
-  font-family: "Manrope", system-ui, sans-serif;
+  justify-content: space-between;
+  padding: 1rem 2rem 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.badge--error {
-  background: var(--error-surface);
-  color: var(--error-foreground);
-  border: 1px solid var(--error-border);
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.badge--warning {
-  background: var(--warning-surface);
-  color: var(--warning-foreground);
-  border: 1px solid var(--warning-border);
-}
-
-.badge--muted {
-  background: var(--ink-navy);
-  color: var(--ink-navy-foreground);
-}
-
-.badge--success {
-  background: var(--success-surface);
-  color: var(--success-foreground);
-  border: 1px solid var(--success-border);
-}
-
-/* ---------- 알림/상태 박스 ---------- */
-.alert {
-  border-radius: var(--radius);
-  padding: 0.875rem 1.125rem;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  font-weight: 400;
-}
-
-.alert--error {
-  background: var(--error-surface);
-  border: 1px solid var(--error-border);
-  color: var(--error-foreground);
-}
-
-.alert--success {
-  background: var(--success-surface);
-  border: 1px solid var(--success-border);
-  color: var(--success-foreground);
-}
-
-/* ---------- 폼 요소 ---------- */
-textarea,
-input[type="text"],
-input[type="url"] {
-  width: 100%;
-  padding: 0.875rem 1.125rem;
-  border: 1px solid var(--pebble);
-  border-radius: var(--radius);
-  font-family: inherit;
-  font-size: 1rem;
-  background: var(--card);
-  color: var(--foreground);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-  line-height: 1.6;
-}
-
-textarea:hover,
-input[type="text"]:hover,
-input[type="url"]:hover {
-  border-color: var(--mist);
-}
-
-textarea:focus,
-input[type="text"]:focus,
-input[type="url"]:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
-}
-
-button {
-  font-family: "Manrope", system-ui, sans-serif;
-  cursor: pointer;
-  font-weight: 600;
-  border: none;
-  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* ---------- 필드 디스플레이 (결과 7필드) ---------- */
-.field-label {
-  font-family: "Manrope", system-ui, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--ink-navy);
-  margin-bottom: 0.4rem;
-  text-transform: uppercase;
-}
-
-.field-value {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: var(--foreground);
-  white-space: pre-wrap;
-  font-weight: 400;
-}
-
-/* ---------- 프리셋 칩 버튼 ---------- */
 .chip {
   display: inline-flex;
   align-items: center;
-  background: var(--card);
+  padding: 0.375rem 0.875rem;
   border: 1px solid var(--pebble);
   border-radius: 999px;
-  padding: 0.5rem 1.125rem;
-  font-size: 0.875rem;
-  cursor: pointer;
+  background: var(--card);
   color: var(--ink-navy);
-  font-weight: 500;
-  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
-  line-height: 1.4;
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
 }
 
 .chip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: #FAFBFF;
+  background: var(--pebble);
+  border-color: var(--mist);
 }
 
-.chip:active {
-  transform: scale(0.97);
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
-/* ---------- 버튼 ---------- */
+.hint-text {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ---------- 액션 행 (분석 버튼 + 오류 + 초기화) ---------- */
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 2rem 2rem;
+  flex-wrap: wrap;
+}
+
+/* 분석 버튼 — Calendly Signal Blue */
 .analyze-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  min-width: 130px;
+  padding: 0.75rem 1.5rem;
   background: var(--accent);
   color: var(--accent-foreground);
   border: none;
-  border-radius: var(--radius);
-  padding: 0.875rem 2rem;
+  border-radius: var(--radius-sm);
+  font-family: "Manrope", system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
-  line-height: 1.4;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   box-shadow: var(--shadow-button);
 }
 
 .analyze-button:hover:not(:disabled) {
-  background: #005BD9;
-  box-shadow: 0 4px 8px 0 rgba(71, 103, 136, 0.12);
+  background: #0056d9;
 }
 
 .analyze-button:active:not(:disabled) {
   transform: scale(0.98);
-  background: #004DB3;
 }
 
 .analyze-button:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus), var(--shadow-button);
+  box-shadow: var(--shadow-focus);
 }
 
-/* ---------- 푸터 ---------- */
-.footer {
-  margin-top: 3rem;
-  text-align: center;
-  color: var(--muted-foreground);
-  font-size: 0.8125rem;
-  border-top: 1px solid var(--pebble);
-  padding-top: 1.5rem;
-  font-weight: 500;
+.analyze-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-/* ---------- 로딩 스피너 ---------- */
-.spinner {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #FFFFFF;
+.analyze-button .spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--accent-foreground);
+  border-top-color: transparent;
   border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  animation: spinner 0.6s linear infinite;
 }
 
-@keyframes spin {
+@keyframes spinner {
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .spinner { animation: none; opacity: 0.6; }
+/* 초기화 버튼 */
+.reset-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 1px solid var(--pebble);
+  border-radius: var(--radius-sm);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  margin-left: auto;
 }
 
-/* ---------- 키보드 포커스 ---------- */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible {
+.reset-button:hover {
+  background: var(--pebble);
+  color: var(--ink-navy);
+  border-color: var(--mist);
+}
+
+.reset-button:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
 
-/* ---------- 스킵 링크 ---------- */
-.skip-link {
-  position: absolute;
-  top: -100%;
-  left: 1.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--ink-navy);
-  color: var(--ink-navy-foreground);
+/* ---------- 오류 알림 ---------- */
+.alert {
+  padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-decoration: none;
-  z-index: 100;
-  font-family: "Manrope", system-ui, sans-serif;
-  transition: top 0.15s ease;
+  font-size: 0.9375rem;
+  line-height: 1.5;
 }
 
-.skip-link:focus { top: 1.5rem; }
+.alert--error {
+  background: var(--error-surface);
+  color: var(--error-foreground);
+  border: 1px solid var(--error-border);
+}
 
-/* ============================================================
-   결과 카드 섹션 (Calendly 스타일)
-   ============================================================ */
+/* ---------- 결과 카드 섹션 (Calendly 스타일) ---------- */
 
 /* 결과 헤더 행 */
 .result-head {
@@ -570,9 +502,7 @@ textarea:focus-visible {
   font-weight: 500;
 }
 
-/* ============================================================
-   "어떻게 쓰면 되나요?" 섹션
-   ============================================================ */
+/* ---------- "어떻게 쓰면 되나요?" 섹션 ---------- */
 .howto-section {
   padding: 2rem 2.25rem;
   margin-bottom: 1.75rem;
@@ -610,6 +540,16 @@ strong { color: inherit; }
 .page-header {
   text-align: center;
   margin-bottom: 3rem;
+}
+
+/* ---------- 푸터 ---------- */
+.footer {
+  margin-top: 3rem;
+  padding: 2rem 0 2.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  border-top: 1px solid var(--pebble);
 }
 
 /* ============================================================
@@ -678,58 +618,133 @@ strong { color: inherit; }
   to { opacity: 0; transform: translateX(2rem); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .toast { animation: none; }
-  .toast-exit { animation: none; opacity: 0; }
-}
-
 /* ============================================================
-   결과 카드 진입 애니메이션
+   결과 팝업 오버레이 (중앙 카드 + 백드롭)
    ============================================================ */
-.result-enter {
-  animation: resultFadeIn 0.35s ease-out;
-}
-
-@keyframes resultFadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .result-enter { animation: none; }
-}
-
-/* ---------- 입력 카드 ---------- */
-.input-card {
-  padding: 2rem 2.25rem;
-}
-
-.field-label-row { margin-bottom: 0.75rem; }
-.message-input { min-height: 140px; }
-
-.chip-row {
-  margin-top: 1.25rem;
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: overlayIn 0.2s ease-out;
 }
 
-.chip-group {
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.result-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 53, 88, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.result-modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  animation: modalIn 0.25s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.result-modal-header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.625rem;
-}
-
-.hint-text {
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-  font-weight: 500;
-}
-
-.action-row {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
   align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid var(--pebble);
 }
+
+.result-close-button {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: var(--pebble);
+  color: var(--ink-navy);
+  border-radius: 999px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-close-button:hover {
+  background: var(--mist);
+}
+
+.result-close-button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.result-modal-body {
+  padding: 1.75rem;
+}
+
+.result-modal-title {
+  margin: 0 0 1.25rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--ink-navy);
+}
+
+/* 모바일 대응 (결과 모달) */
+@media (max-width: 640px) {
+  .result-overlay {
+    padding: 0.75rem;
+    align-items: flex-end;
+  }
+  .result-modal {
+    max-width: 100%;
+    max-height: calc(100vh - 1.5rem);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+  }
+  .result-modal-header {
+    padding: 1rem 1.25rem;
+  }
+  .result-modal-body {
+    padding: 1.25rem;
+  }
+}
+
+/* ---------- Skip Link ---------- */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--ink-navy);
+  color: var(--ink-navy-foreground);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  z-index: 100;
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus { top: 1.5rem; }

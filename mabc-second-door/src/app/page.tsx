@@ -63,22 +63,17 @@ export default function Home() {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const [toast, setToast] = useState<ToastData | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const toastIdRef = useRef(0);
 
-  // 토스트 헬퍼
+  // 토스트 헬퍼 — 새 토스트가 오면 이전 토스트는 제거됨(단일 토스트)
   const addToast = useCallback((variant: ToastVariant, title: string, message: string) => {
-    const id = ++toastIdRef.current;
-    setToasts((prev) => [...prev, { id, variant, title, message }]);
+    setToast({ id: Date.now(), variant, title, message });
   }, []);
 
-  const removeToast = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const clearToast = useCallback(() => {
+    setToast(null);
   }, []);
-
-  // 결과 카드 진입 애니메이션 — 마운트 시 클래스 적용
-  const [resultEnterKey, setResultEnterKey] = useState(0);
 
   const selectPreset = (preset: (typeof EXAMPLE_PRESETS)[number]) => {
     setMessage(preset.message);
@@ -86,6 +81,15 @@ export default function Home() {
     setError("");
     setTimeout(() => textareaRef.current?.focus(), 0);
   };
+
+  const resetAll = useCallback(() => {
+    setMessage("");
+    setResult(null);
+    setError("");
+    setLoading(false);
+    clearToast();
+    textareaRef.current?.focus();
+  }, [clearToast]);
 
   const handleAnalyze = async () => {
     if (!message.trim()) {
@@ -112,6 +116,7 @@ export default function Home() {
 
       const data = await res.json();
 
+      // 식별자 노출 확인 (로깅 전용)
       const fieldsText = Object.values(data.fields)
         .join(" ")
         .toLowerCase();
@@ -119,8 +124,10 @@ export default function Home() {
         console.error("주의: 응답 필드에 원본 식별자가 포함되어 있습니다.");
       }
 
-      setResult(data);
+      // 약간의 지연 후 결과 표시 (자연스러운 피드백 느낌을 위해)
       addToast("success", "분석 완료", "결과를 확인하려면 아래 카드를 참고하세요.");
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      setResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
       addToast("error", "분석 오류", e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
@@ -134,6 +141,11 @@ export default function Home() {
     handleAnalyze();
   };
 
+  const closeResult = useCallback(() => {
+    setResult(null);
+    clearToast();
+  }, [clearToast]);
+
   const prohibitedSummary =
     result &&
     (result.prohibited.length > 0 &&
@@ -142,29 +154,22 @@ export default function Home() {
   const resultHeadClass = `result-head result-head--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`;
   const prohibitedBoxClass = `prohibited-box prohibited-box--${prohibitedSummary ? "error" : "success"}`;
 
-  // 결과가 새로 설정되면 진입 애니메이션 키 변경
-  useEffect(() => {
-    if (result) {
-      setResultEnterKey((k) => k + 1);
-    }
-  }, [result]);
-
   return (
     <main className="container">
       <a href="#main-content" className="skip-link">본문으로 이동</a>
 
-      {/* 토스트 알림 */}
-      {toasts.map((t) => (
+      {/* 토스트 알림 (화면 상단, 단일 토스트) */}
+      {toast && (
         <div
-          key={t.id}
-          className={`toast toast--${t.variant}`}
+          className={`toast toast--${toast.variant}`}
           role="alert"
           aria-live="polite"
         >
-          <div className="toast-title">{t.title}</div>
-          <div className="toast-message">{t.message}</div>
+          <div className="toast-title">{toast.title}</div>
+          <div className="toast-message">{toast.message}</div>
         </div>
-      ))}
+      )}
+
       {/* 헤더 */}
       <header className="page-header">
         <h1 className="title">두번째문</h1>
@@ -174,16 +179,14 @@ export default function Home() {
           정리해 드립니다.
         </p>
         <div className="pill-group">
-          <span>키 없이 동작</span>
+          <span>의심 메시지를 붙여넣으면</span>
           <span className="pill-dot">·</span>
-          <span>예선 당선 스킬 기반</span>
-          <span className="pill-dot">·</span>
-          <span>메시지 진위 판정 안 함</span>
+          <span>멈추고 확인하는 절차를 안내합니다</span>
         </div>
       </header>
 
       {/* 입력 폼 */}
-      <section className="card input-card">
+      <section className="card input-card" id="main-content">
         <form onSubmit={handleSubmit}>
           <div className="field-label-row">
             <label htmlFor="message" className="field-label">
@@ -236,77 +239,103 @@ export default function Home() {
                 {error}
               </p>
             )}
+            {result && (
+              <button
+                type="button"
+                onClick={resetAll}
+                className="reset-button"
+              >
+                다시 분석하기
+              </button>
+            )}
           </div>
         </form>
       </section>
 
-      {/* 결과 */}
+      {/* 결과 팝업 오버레이 (중앙 카드 + 백드롭) */}
       {result && (
-        <section
-          id="main-content"
-          className={`card result-enter`}
-          key={resultEnterKey}
-          aria-live="polite"
+        <div
+          className="result-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="result-title"
         >
-          {/* 결과 헤더 (분기 뱃지) */}
-          <div className={resultHeadClass}>
-            <div className="result-head-row">
-              <span
-                className={`result-head-badge result-head-badge--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`}
-              >
-                {result.branchLabel}
-              </span>
-              <span className="result-meta">
-                {result.status}
-              </span>
-            </div>
-            <span className="result-timestamp">
-              {new Date(result.timestamp).toLocaleString("ko-KR")}
-            </span>
-          </div>
-
-          {/* 7개 필드 */}
-          <div className="field-list">
-            <dl className="result-fields-dl">
-              {([
-                ["상태", "status"],
-                ["중단조치", "중단조치"],
-                ["확인할주장", "확인할주장"],
-                ["독립확인", "독립확인"],
-                ["답장예시", "답장예시"],
-                ["판단이유", "판단이유"],
-                ["하지말것", "하지말것"],
-              ] as const).map(([labelKey, fieldKey]) => (
-                <div
-                  key={fieldKey}
-                  className="field-row"
-                >
-                  <dt className="field-label">{labelKey}</dt>
-                  <dd className="field-value">{result.fields[fieldKey]}</dd>
+          <div
+            className="result-backdrop"
+            onClick={closeResult}
+            aria-hidden="true"
+          />
+          <div className="result-modal">
+            <div className="result-modal-header">
+              <div className={resultHeadClass}>
+                <div className="result-head-row">
+                  <span
+                    className={`result-head-badge result-head-badge--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`}
+                  >
+                    {result.branchLabel}
+                  </span>
+                  <span className="result-meta">
+                    {result.status}
+                  </span>
                 </div>
-              ))}
-            </dl>
+                <span className="result-timestamp">
+                  {new Date(result.timestamp).toLocaleString("ko-KR")}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="result-close-button"
+                onClick={closeResult}
+                aria-label="분석 결과 닫기"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="result-modal-body">
+              <h2 id="result-title" className="result-modal-title">분석 결과</h2>
+              <div className="field-list">
+                <dl className="result-fields-dl">
+                  {([
+                    ["상태", "status"],
+                    ["중단조치", "중단조치"],
+                    ["확인할주장", "확인할주장"],
+                    ["독립확인", "독립확인"],
+                    ["답장예시", "답장예시"],
+                    ["판단이유", "판단이유"],
+                    ["하지말것", "하지말것"],
+                  ] as const).map(([labelKey, fieldKey]) => (
+                    <div
+                      key={fieldKey}
+                      className="field-row"
+                    >
+                      <dt className="field-label">{labelKey}</dt>
+                      <dd className="field-value">{result.fields[fieldKey]}</dd>
+                    </div>
+                  ))}
+                </dl>
 
-            {/* 금지 패턴 표시 */}
-            <div className={prohibitedBoxClass}>
-              <p
-                className={`prohibited-box-title prohibited-box-title--${prohibitedSummary ? "error" : "success"}`}
-              >
-                {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
-              </p>
-              <p
-                className={`prohibited-box-text prohibited-box-text--${prohibitedSummary ? "error" : "success"}`}
-              >
-                {result.prohibited.join(" · ")}
+                {/* 금지 패턴 표시 */}
+                <div className={prohibitedBoxClass}>
+                  <p
+                    className={`prohibited-box-title prohibited-box-title--${prohibitedSummary ? "error" : "success"}`}
+                  >
+                    {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
+                  </p>
+                  <p
+                    className={`prohibited-box-text prohibited-box-text--${prohibitedSummary ? "error" : "success"}`}
+                  >
+                    {result.prohibited.join(" · ")}
+                  </p>
+                </div>
+              </div>
+
+              {/* 안내문 */}
+              <p className="result-notice">
+                {result.notice}
               </p>
             </div>
           </div>
-
-          {/* 안내문 */}
-          <p className="result-notice">
-            {result.notice}
-          </p>
-        </section>
+        </div>
       )}
 
       {/* 어떻게 쓰면 되나요? */}
@@ -335,13 +364,7 @@ export default function Home() {
 
       {/* 푸터 */}
       <footer className="footer">
-        두번째문 (second-door) — 규칙 기반 분석 서비스 · 예선 당선 스킬 기반
-        {typeof process !== "undefined" &&
-        process.env.NEXT_PUBLIC_UPSTAGE_API_KEY ? (
-          <> · Solar Pro 4 연동</>
-        ) : (
-          <> · Solar Pro 4 호출 없이 동작</>
-        )}
+        두번째문 (second-door) — 의심 메시지를 붙여넣으면 멈추고 확인하는 절차를 안내합니다
       </footer>
     </main>
   );
