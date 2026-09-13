@@ -552,8 +552,13 @@ strong { color: inherit; }
   border-top: 1px solid var(--pebble);
 }
 
+/* ---------- 본문 스크롤 잠금 (모달 오픈 시) ---------- */
+.body-scroll-locked {
+  overflow: hidden;
+}
+
 /* ============================================================
-   토스트 알림 (구현: page.tsx에서 상태 관리)
+   Skip Link
    ============================================================ */
 .toast-container {
   position: fixed;

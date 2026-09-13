@@ -65,6 +65,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState<ToastData | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // 토스트 헬퍼 — 새 토스트가 오면 이전 토스트는 제거됨(단일 토스트)
   const addToast = useCallback((variant: ToastVariant, title: string, message: string) => {
@@ -88,6 +89,7 @@ export default function Home() {
     setError("");
     setLoading(false);
     clearToast();
+    document.body.classList.remove("body-scroll-locked");
     textareaRef.current?.focus();
   }, [clearToast]);
 
@@ -144,7 +146,43 @@ export default function Home() {
   const closeResult = useCallback(() => {
     setResult(null);
     clearToast();
+    document.body.classList.remove("body-scroll-locked");
   }, [clearToast]);
+
+  // 결과 모달 열릴 때: 본문 스크롤 잠금 + 닫기 버튼 포커스
+  // 결과 모달 닫힐 때: 본문 스크롤 복원 + 이전 요소로 포커스 복귀
+  useEffect(() => {
+    if (result) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      document.body.classList.add("body-scroll-locked");
+      const timer = setTimeout(() => {
+        const closeBtn = document.querySelector(".result-close-button") as HTMLElement | null;
+        if (closeBtn) {
+          closeBtn.focus();
+        }
+      }, 150);
+      return () => {
+        clearTimeout(timer);
+        document.body.classList.remove("body-scroll-locked");
+      };
+    } else {
+      document.body.classList.remove("body-scroll-locked");
+    }
+  }, [result]);
+
+  // Escape 키로 결과 모달 닫기
+  useEffect(() => {
+    if (!result) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeResult();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [result, closeResult]);
 
   const prohibitedSummary =
     result &&
