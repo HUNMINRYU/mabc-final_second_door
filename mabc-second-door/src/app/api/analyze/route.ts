@@ -87,13 +87,172 @@ function checkProhibitedOutput(fields: Record<string, string>): string[] {
   return prohibited;
 }
 
+// ---- 공공데이터 출처·유형·예방 참고 정보 ----
+// 판정 어휘 없이, 멈추고 확인하는 절차를 돕는 참고 자료 성격
+// 출처는 공공데이터-sources.md 기준 검증된 것만 사용
+
+const FRAUD_TYPE_TAGS = [
+  { tag: "대출알선형", keywords: ["대출", "한도", "신용", "등급", "추가대출", "대환"], source: "official" },
+  { tag: "가짜 검찰청·위조 수사공문형", keywords: ["검찰", "법원", "경찰", "출석", "수사", "공문", "혐의", "고발", "조사"], source: "official" },
+  { tag: "자녀 납치 빙자 협박형", keywords: ["납치", "괜찮아", "살려", "아이", "자녀", "손자", "다쳤다", "위험"], source: "official" },
+  { tag: "가족·지인 사칭 메신저피싱", keywords: ["엄마", "아빠", "부모", "가족", "친구", "딸", "아들", "언니", "오빠", "형", "누나"], source: "official" },
+  { tag: "정부기관 사칭형", keywords: ["정부", "관공서", "시청", "구청", "국세청", "건강보험", "연금", "행정", "세금", "기관"], source: "official" },
+  { tag: "정부지원 대출·채무조정 빙자형", keywords: ["정부지원", "채무", "조정", "채무조정", "햇살론", "새희망", "미소금융", "서민금융"], source: "derived" },
+  { tag: "악성앱 설치 유도형", keywords: ["설치", "앱", "다운로드", "실행", "업데이트", "백신", "보안", "보호앱", "원격", "화면"], source: "official" },
+  { tag: "투자리딩방·로맨스스캠 등 신종스캠형", keywords: ["투자", "리딩", "수익률", "코인", "주식", "수익", "VIP", "단톡", "오픈채팅"], source: "derived" },
+];
+
+const PREVENTION_TIPS = [
+  { tip: "메시지 속 번호·링크·계좌는 쓰지 말고, 이미 알고 있던 공식·가족 경로로만 확인하세요.", source: "official" },
+  { tip: "급하다는 말과 금전 요구가 함께 오면, 바로 움직이지 말고 이미 알던 경로로 먼저 확인하세요.", source: "derived" },
+  { tip: "새 연락처·계좌·채널 변경 주장은 메시지 전에 알던 경로로 사실 여부를 먼저 확인하세요.", source: "derived" },
+  { tip: "메시지 하나로 바로 결론 내리지 말고, 필요한 경우 이미 알고 있던 경로로 확인하세요.", source: "derived" },
+  { tip: "이미 무언가(입금·이체·인증·설치 등)를 했다면, 추가 행동 전에 공식 채널로 확인하세요.", source: "derived" },
+];
+
+const DATA_SOURCES = [
+  { name: "금융감독원 보이스피싱 예방안내", url: "https://www.fss.or.kr/fss/main/sub1voice.do?menuNo=200012", source: "official" },
+  { name: "금융감독원 사기유형별 통계", url: "https://www.fss.or.kr/fss/main/contents.do?menuNo=200565", source: "official" },
+  { name: "국가정보원·경찰청 보이스피싱 8대 사기유형", url: "https://www.counterscam112.go.kr/campaign/index.html", source: "official" },
+  { name: "금융감독원·삼성생명 소비자경보", url: "https://www.samsunglife.com", source: "derived" },
+  { name: "경찰청 전기통신금융사기 통합신고대응센터", url: "https://www.police.go.kr", source: "official" },
+  { name: "금융감독원·KDI 보이스피싱 피해자 설문조사(2021.06.30)", url: "https://www.kdi.re.kr", source: "derived" },
+  { name: "금융위원회 보이스피싱 대응 간담회(2026.03.26)", url: "https://www.fsc.go.kr", source: "derived" },
+];
+
+function buildPublicDataInfo(
+  message: string,
+  branch: string,
+  hasCustomerTitle: boolean,
+  hasFamily: boolean,
+  hasOrg: boolean,
+): {
+  dataSources: { name: string; url: string; source: string }[];
+  fraudTypeTags: { tag: string; source: string }[];
+  preventionTips: { tip: string; source: string }[];
+  scenarioNote: string;
+} {
+  const tags: { tag: string; source: string }[] = [];
+  const lower = message.toLowerCase();
+
+  for (const ft of FRAUD_TYPE_TAGS) {
+    if (ft.keywords.some((k) => lower.includes(k))) {
+      tags.push({ tag: ft.tag, source: ft.source });
+    }
+  }
+
+  // 고객님 호칭 + 계좌/송금 → 대출알선형·정부기관 사칭형 가능성 참고
+  if (hasCustomerTitle && /(이체|송금|입금|계좌|은행|금융)/i.test(message)) {
+    if (!tags.some((t) => t.tag === "대출알선형")) {
+      tags.push({ tag: "대출알선형 (고객님 호칭 + 계좌 요구 패턴 참고)", source: "derived" });
+    }
+    if (!tags.some((t) => t.tag === "정부기관 사칭형")) {
+      tags.push({ tag: "정부기관 사칭형 (고객님 호칭 패턴 참고)", source: "derived" });
+    }
+  }
+
+  // 가족·지인 사칭 키워드 → 해당 유형 참고
+  if (hasFamily && /(급[합니다]?|당장|지금|바로|돈|금액|계좌|송금|입금)/i.test(message)) {
+    if (!tags.some((t) => t.tag === "가족·지인 사칭 메신저피싱")) {
+      tags.push({ tag: "가족·지인 사칭 메신저피싱 (가족 호출 + 금전 요구 패턴 참고)", source: "derived" });
+    }
+  }
+
+  // 기관 사칭 키워드 + 압박 → 정부기관 사칭형 참고
+  if (hasOrg && /(비밀|함부로|절대|말하지|알려지면|혼자|조용히|급[합니다]?|지금 당장|바로|빨리|늦으면|기회|마지막|오늘 안|지금만|긴급|중요|사망|사고|입원|구속|체포|경찰|법원|소송|출석|출석요구|수사|조사)/i.test(message)) {
+    if (!tags.some((t) => t.tag === "정부기관 사칭형")) {
+      tags.push({ tag: "정부기관 사칭형 (기관 호출 + 비밀·압박 패턴 참고)", source: "derived" });
+    }
+  }
+
+  // 중복 제거 (같은 tag가 여러 번 붙는 경우)
+  const seen = new Set<string>();
+  const uniqueTags = tags.filter((t) => {
+    if (seen.has(t.tag)) return false;
+    seen.add(t.tag);
+    return true;
+  });
+
+  // 예방 팁: 분기·키워드에 따라 관련 팁 선별
+  const tips: { tip: string; source: string }[] = [];
+  const tipAdded = new Set<string>();
+
+  if (branch === "즉시중지") {
+    for (const pt of PREVENTION_TIPS) {
+      if (!tipAdded.has(pt.tip)) {
+        tips.push({ tip: pt.tip, source: pt.source });
+        tipAdded.add(pt.tip);
+      }
+    }
+  } else if (branch === "먼저확인") {
+    for (const pt of PREVENTION_TIPS) {
+      if (pt.tip.includes("새 연락처") || pt.tip.includes("새 연락처")) {
+        if (!tipAdded.has(pt.tip)) {
+          tips.push({ tip: pt.tip, source: pt.source });
+          tipAdded.add(pt.tip);
+        }
+      }
+    }
+    // 기본 팁도 추가
+    if (!tipAdded.has(PREVENTION_TIPS[0].tip)) {
+      tips.push({ tip: PREVENTION_TIPS[0].tip, source: PREVENTION_TIPS[0].source });
+      tipAdded.add(PREVENTION_TIPS[0].tip);
+    }
+  } else {
+    // 일반: 기본 팁 2개
+    if (!tipAdded.has(PREVENTION_TIPS[0].tip)) {
+      tips.push({ tip: PREVENTION_TIPS[0].tip, source: PREVENTION_TIPS[0].source });
+      tipAdded.add(PREVENTION_TIPS[0].tip);
+    }
+    if (!tipAdded.has(PREVENTION_TIPS[3].tip)) {
+      tips.push({ tip: PREVENTION_TIPS[3].tip, source: PREVENTION_TIPS[3].source });
+      tipAdded.add(PREVENTION_TIPS[3].tip);
+    }
+  }
+
+  // 시나리오 노트: 분기 + 고객님 호칭 + 가족/기관 여부에 따라 요약
+  let scenarioNote = "";
+  if (!message.trim()) {
+    scenarioNote = "메시지가 없어 참고 정보를 정리할 수 없습니다. 의심되는 메시지 원문을 넣어 주세요.";
+  } else if (branch === "즉시중지") {
+    if (hasCustomerTitle) {
+      scenarioNote = "이 메시지에는 '고객님' 등 조직 발신자 표시와 계좌·송금 요구가 함께 보입니다. 금융감독원·경찰청 공개 사례에서 이런 조합은 보이스피싱 전형 패턴으로 자주 언급됩니다. 출처: 금융감독원 보이스피싱 예방안내(fss.or.kr), 국가정보원·경찰청 8대 사기유형.";
+    } else if (hasFamily) {
+      scenarioNote = "이 메시지에는 가족·지인 호출과 금전 요구가 함께 보입니다. 가족·지인 사칭 메신저피싱 유형으로 분류될 수 있는 패턴입니다. 출처: 국가정보원·경찰청 보이스피싱 8대 사기유형.";
+    } else if (hasOrg) {
+      scenarioNote = "이 메시지에는 정부기관·기관 사칭과 압박·비밀 요구가 함께 보입니다. 정부기관 사칭형 패턴으로 분류될 수 있습니다. 출처: 금융감독원·경찰청 공개 사례.";
+    } else {
+      scenarioNote = "이 메시지는 이체·자격증명·링크·설치·원격접속·비밀압박 또는 이미 한 행동 신호가 있어 즉시중지로 분류되었습니다. 금융감독원·경찰청 공개 사례에서 이런 신호들이 함께 나타날 때 주의가 필요하다고 안내합니다. 출처: 금융감독원 보이스피싱 예방안내(fss.or.kr), 국가정보원·경찰청 8대 사기유형.";
+    }
+  } else if (branch === "먼저확인") {
+    scenarioNote = "이 메시지는 연락처·번호·계좌·채널 변경 주장이 있으나 이체·자격증명·링크·설치·원격접속·비밀압박은 보이지 않아 먼저확인으로 분류되었습니다. 금융감독원·경찰청 안내에 따르면 연락처 변경 주장은 메시지 전에 이미 알고 있던 경로로 사실 여부를 먼저 확인하는 것이 권장됩니다. 출처: 금융감독원 보이스피싱 예방안내(fss.or.kr).";
+  } else {
+    scenarioNote = "이 메시지는 읽을 수 있는 메시지이나 즉시중지·먼저확인 신호가 뚜렷하지 않아 일반으로 분류되었습니다. 금융감독원·경찰청 안내에 따르면 메시지 하나로 바로 결론 내리지 말고, 필요한 경우 이미 알고 있던 경로로 확인하는 것이 권장됩니다. 출처: 금융감독원 보이스피싱 예방안내(fss.or.kr).";
+  }
+
+  return {
+    dataSources: DATA_SOURCES,
+    fraudTypeTags: uniqueTags,
+    preventionTips: tips,
+    scenarioNote,
+  };
+}
+
 /** 7개 필드 생성 */
-function buildFields(raw: string): Record<string, string> {
+function buildFields(raw: string): {
+  fields: Record<string, string>;
+  publicDataInfo: ReturnType<typeof buildPublicDataInfo>;
+  branch: string;
+} {
   const message = raw.trim();
   const sanitized = sanitizeIdentifiers(message);
 
-  // "고객님" 호칭 탐지 — 조직 발신자 표시 (보이스피싱 전형 패턴)
+  // 분석에 필요한 키워드 탐지를 미리 계산 (공공데이터 정보용)
   const hasCustomerTitle = /고객님|고객\s*님/i.test(message);
+  const hasFamily =
+    /(아들|딸|엄마|아빠|부모|자녀|가족|형|누나|오빠|언니|남동생|여동생|친척|조카)/i.test(message);
+  const hasOrg =
+    /(은행|카드사|통신사|택배|경찰서|법원|관공서|시청|구청|우체국|학교|회사|보험사|병원|법원|경찰|소방|정부|행정|세금|국세청|건강보험|연금)/i.test(message);
 
   // --- 분기 선택 (즉시중지 > 먼저확인 > 일반 > 입력필요) ---
   let branch: string;
@@ -108,9 +267,9 @@ function buildFields(raw: string): Record<string, string> {
     const lower = message.toLowerCase();
 
     const hasTransfer =
-      /(이체|송금|입금|보내(어|주세요|줘|줄래)|계좌|통장|은행|금융|정산|수금|납부|결제)/i.test(
+      /(이체|송금|입금|보내(어|주세요|줘|줄래|줄 수|줄까|주|드리|줄)|계좌|통장|은행|금융|정산|수금|납부|결제|송금해|이체해|보내줘|보내줄)/i.test(
         message,
-      ) && /(돈|금액|급[합니다]?|당장|지금|바로|오늘|어제|병원비|빌려|대출|상환|외상)/i.test(
+      ) && /(돈|금액|급[합니다]?|당장|지금|바로|오늘|어제|병원비|빌려|대출|상환|외상|만원|원|필요)/i.test(
         message,
       );
 
@@ -166,7 +325,7 @@ function buildFields(raw: string): Record<string, string> {
           : "메시지 속 '고객님' 등 조직 발신자 표시가 있어 검증 전 상태로 둡니다.";
     } else if (
       // 먼저확인: 번호·계좌·연락처·채널을 바꾸지만 즉시중지 신호는 없음
-      /(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|계좌|새[번호전화]|이[번호번]|앞[으로]로|이제[부터는부터는]|연락[해다오세요])/i.test(
+      /(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|계좌|새[번호전화]|이[번호번]|앞[으로]로|이제[부터는부터는]|연락[해다오세요]|연락드려|연락주세요|연락바랍니다)/i.test(
         message,
       )
     ) {
@@ -223,7 +382,7 @@ function buildFields(raw: string): Record<string, string> {
     if (/(바꿨[어다]|바뀌[었었]어|번호|연락처|전화|카톡|문자|이메일|주소|채널|새[번호전화]|이[번호번]|앞[으로]로)/i.test(message))
       claimCandidates.push("\"연락처·채널 변경\" 주장");
     if (hasCustomerTitle)
-      claimCandidates.push("\"'고객님' 등 조직 발신자 표시\" 주장");
+      claimCandidates.push("'고객님' 등 조직 발신자 표시\" 주장");
 
     if (claimCandidates.length === 0) {
       fields["확인할주장"] =
@@ -281,9 +440,6 @@ function buildFields(raw: string): Record<string, string> {
       "\"읽어 봤다. 메시지 하나로 바로 결론 내리지 않고, 필요한 부분은 이미 알던 경로로 확인해 볼게.\"";
   }
 
-  // 반환 전 분기 정보 추가 — POST 핸들러에서 재추출하지 않도록
-  fields["_branch"] = branch;
-
   // 6. 판단이유
   fields["판단이유"] = branchReason;
 
@@ -302,7 +458,15 @@ function buildFields(raw: string): Record<string, string> {
       "메시지 없이 판단 내리기, 공란 상태에서 이 서비스를 \"판정기\"처럼 오해하기.";
   }
 
-  return fields;
+  // ---- 공공데이터 기반 참고 정보 (출처 표기 + 유형 태그 + 예방 팁) ----
+  // 판정 어휘 없이, 멈추고 확인하는 절차를 돕는 참고 자료 성격으로 제공
+  const publicDataInfo = buildPublicDataInfo(message, branch, hasCustomerTitle, hasFamily, hasOrg);
+
+  return {
+    fields,
+    publicDataInfo,
+    branch,
+  };
 }
 
 /** 금지 패턴 검사 (P0 표시용) */
@@ -339,17 +503,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fields = buildFields(rawMessage);
-    const branch = fields._branch || (() => {
-      const reason = fields["판단이유"];
-      if (reason.includes("입력필요") || reason.startsWith("메시지가 비어"))
-        return "입력필요";
-      if (reason.includes("즉시중지")) return "즉시중지";
-      if (reason.includes("먼저확인")) return "먼저확인";
-      return "일반";
-    })();
+    const { fields, publicDataInfo, branch } = buildFields(rawMessage);
 
-    // 금지 패턴 검사 결과
+    // 금지 패턴 검사 결과 (fields만 검사 — publicDataInfo는 제외)
     const prohibited = checkProhibitedOutput(fields);
 
     // ---- 주의: 원본 식별자는 절대 클라이언트에 그대로 보내지 않음 ----
@@ -361,10 +517,11 @@ export async function POST(request: NextRequest) {
       branch,
       branchLabel: branchLabel(branch),
       fields,
+      publicDataInfo,
       prohibited,
       timestamp: new Date().toISOString(),
       notice:
-        "이 결과는 메시지 진위를 판정하지 않습니다. 독립 확인 절차를 정리한 것입니다. 제공을 식별하지 않고 범주로만 표현했습니다.",
+        "이 결과는 메시지 진위를 판정하지 않습니다. 공공데이터를 참고한 독립 확인 절차를 정리한 것입니다. 제공을 식별하지 않고 범주로만 표현했습니다.",
     });
   } catch (err) {
     return NextResponse.json(
@@ -381,7 +538,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     service: "두번째문 (second-door) 분석 API",
-    version: "0.1.0",
-    note: "POST /api/analyze 에 { message: '...' } 로 요청",
+    version: "0.2.0",
+    note: "POST /api/analyze 에 { message: '...' } 로 요청. 공공데이터 출처·유형태그·예방팁 포함.",
   });
 }

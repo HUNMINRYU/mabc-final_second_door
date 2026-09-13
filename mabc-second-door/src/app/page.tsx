@@ -14,6 +14,12 @@ type AnalyzeResult = {
   fields: {
     [key: string]: string;
   };
+  publicDataInfo: {
+    dataSources: { name: string; url: string; source: string }[];
+    fraudTypeTags: { tag: string; source: string }[];
+    preventionTips: { tip: string; source: string }[];
+    scenarioNote: string;
+  };
   prohibited: string[];
   notice: string;
   timestamp: string;
@@ -28,7 +34,7 @@ interface ToastData {
   message: string;
 }
 
-const EXAMPLE_PRESETS = [
+const EXAMPLE_PRESETS: { label: string; message: string; hint: string }[] = [
   {
     label: "아들 사칭 급전 메시지",
     message:
@@ -68,9 +74,12 @@ export default function Home() {
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // 토스트 헬퍼 — 새 토스트가 오면 이전 토스트는 제거됨(단일 토스트)
-  const addToast = useCallback((variant: ToastVariant, title: string, message: string) => {
-    setToast({ id: Date.now(), variant, title, message });
-  }, []);
+  const addToast = useCallback(
+    (variant: ToastVariant, title: string, message: string) => {
+      setToast({ id: Date.now(), variant, title, message });
+    },
+    [],
+  );
 
   const clearToast = useCallback(() => {
     setToast(null);
@@ -132,7 +141,11 @@ export default function Home() {
       setResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
-      addToast("error", "분석 오류", e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
+      addToast(
+        "error",
+        "분석 오류",
+        e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.",
+      );
     } finally {
       setLoading(false);
     }
@@ -189,12 +202,24 @@ export default function Home() {
     (result.prohibited.length > 0 &&
       result.prohibited[0] !== "없음 — 출력이 금지 패턴 규칙을 위반하지 않습니다.");
 
-  const resultHeadClass = `result-head result-head--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`;
-  const prohibitedBoxClass = `prohibited-box prohibited-box--${prohibitedSummary ? "error" : "success"}`;
+  const resultHeadClass = `result-head result-head--${
+    result?.branch === "즉시중지"
+      ? "error"
+      : result?.branch === "먼저확인"
+        ? "warning"
+        : result?.branch === "입력필요"
+          ? "muted"
+          : "success"
+  }`;
+  const prohibitedBoxClass = `prohibited-box prohibited-box--${
+    prohibitedSummary ? "error" : "success"
+  }`;
 
   return (
     <main className="container">
-      <a href="#main-content" className="skip-link">본문으로 이동</a>
+      <a href="#main-content" className="skip-link">
+        본문으로 이동
+      </a>
 
       {/* 토스트 알림 (화면 상단, 단일 토스트) */}
       {toast && (
@@ -308,13 +333,19 @@ export default function Home() {
               <div className={resultHeadClass}>
                 <div className="result-head-row">
                   <span
-                    className={`result-head-badge result-head-badge--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`}
+                    className={`result-head-badge result-head-badge--${
+                      result?.branch === "즉시중지"
+                        ? "error"
+                        : result?.branch === "먼저확인"
+                          ? "warning"
+                          : result?.branch === "입력필요"
+                            ? "muted"
+                            : "success"
+                    }`}
                   >
                     {result.branchLabel}
                   </span>
-                  <span className="result-meta">
-                    {result.status}
-                  </span>
+                  <span className="result-meta">{result.status}</span>
                 </div>
                 <span className="result-timestamp">
                   {new Date(result.timestamp).toLocaleString("ko-KR")}
@@ -330,7 +361,9 @@ export default function Home() {
               </button>
             </div>
             <div className="result-modal-body">
-              <h2 id="result-title" className="result-modal-title">분석 결과</h2>
+              <h2 id="result-title" className="result-modal-title">
+                분석 결과
+              </h2>
               <div className="field-list">
                 <dl className="result-fields-dl">
                   {([
@@ -342,25 +375,97 @@ export default function Home() {
                     ["판단이유", "판단이유"],
                     ["하지말것", "하지말것"],
                   ] as const).map(([labelKey, fieldKey]) => (
-                    <div
-                      key={fieldKey}
-                      className="field-row"
-                    >
+                    <div key={fieldKey} className="field-row">
                       <dt className="field-label">{labelKey}</dt>
                       <dd className="field-value">{result.fields[fieldKey]}</dd>
                     </div>
                   ))}
                 </dl>
 
+                {/* 공공데이터 참고 정보 (출처 + 유형 태그 + 예방 팁 + 시나리오 노트) */}
+                {result.publicDataInfo && (
+                  <div className="public-data-section">
+                    <h3 className="public-data-title">📚 참고 정보</h3>
+
+                    {/* 시나리오 노트 */}
+                    <div className="public-data-card">
+                      <p className="public-data-label">시나리오 노트</p>
+                      <p className="public-data-text">
+                        {result.publicDataInfo.scenarioNote}
+                      </p>
+                    </div>
+
+                    {/* 사기 유형 태그 */}
+                    {result.publicDataInfo.fraudTypeTags.length > 0 && (
+                      <div className="public-data-card">
+                        <p className="public-data-label">관련 유형 태그</p>
+                        <ul className="tag-list">
+                          {result.publicDataInfo.fraudTypeTags.map((t) => (
+                            <li key={t.tag} className="tag-item">
+                              <span className="tag-name">{t.tag}</span>
+                              <span className="tag-source">
+                                {t.source === "official" ? "공식 분류" : "종합 분류"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 예방 팁 */}
+                    {result.publicDataInfo.preventionTips.length > 0 && (
+                      <div className="public-data-card">
+                        <p className="public-data-label">예방 참고</p>
+                        <ul className="tip-list">
+                          {result.publicDataInfo.preventionTips.map((t, i) => (
+                            <li key={i} className="tip-item">
+                              <span className="tip-text">{t.tip}</span>
+                              <span className="tip-source">
+                                {t.source === "official" ? "공식 안내" : "종합 안내"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 사용 출처 */}
+                    <div className="public-data-card public-data-sources">
+                      <p className="public-data-label">사용한 공공데이터 출처</p>
+                      <ul className="source-list">
+                        {result.publicDataInfo.dataSources.map((s, i) => (
+                          <li key={i} className="source-item">
+                            <a
+                              href={s.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="source-link"
+                            >
+                              {s.name}
+                            </a>
+                            <span className="source-type">
+                              {s.source === "official" ? "공식" : "종합"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
                 {/* 금지 패턴 표시 */}
                 <div className={prohibitedBoxClass}>
                   <p
-                    className={`prohibited-box-title prohibited-box-title--${prohibitedSummary ? "error" : "success"}`}
+                    className={`prohibited-box-title prohibited-box-title--${
+                      prohibitedSummary ? "error" : "success"
+                    }`}
                   >
                     {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
                   </p>
                   <p
-                    className={`prohibited-box-text prohibited-box-text--${prohibitedSummary ? "error" : "success"}`}
+                    className={`prohibited-box-text prohibited-box-text--${
+                      prohibitedSummary ? "error" : "success"
+                    }`}
                   >
                     {result.prohibited.join(" · ")}
                   </p>
@@ -368,9 +473,7 @@ export default function Home() {
               </div>
 
               {/* 안내문 */}
-              <p className="result-notice">
-                {result.notice}
-              </p>
+              <p className="result-notice">{result.notice}</p>
             </div>
           </div>
         </div>
@@ -394,15 +497,14 @@ export default function Home() {
               절차를 정리해 드립니다.
             </li>
           </ul>
-          <p className="howto-note">
-            {CONTEXT_NOTE}
-          </p>
+          <p className="howto-note">{CONTEXT_NOTE}</p>
         </section>
       )}
 
       {/* 푸터 */}
       <footer className="footer">
-        두번째문 (second-door) — 의심 메시지를 붙여넣으면 멈추고 확인하는 절차를 안내합니다
+        두번째문 (second-door) — 의심 메시지를 붙여넣으면 멈추고 확인하는 절차를
+        안내합니다
       </footer>
     </main>
   );
