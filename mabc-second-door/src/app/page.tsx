@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 // 두번째문(second-door) — 의심 메시지 분석 서비스
 // 규칙 기반 7필드 출력 (키 없이 동작, Solar 호출은 선택 사항)
@@ -18,6 +18,15 @@ type AnalyzeResult = {
   notice: string;
   timestamp: string;
 };
+
+type ToastVariant = "loading" | "success" | "error" | "info";
+
+interface ToastData {
+  id: number;
+  variant: ToastVariant;
+  title: string;
+  message: string;
+}
 
 const EXAMPLE_PRESETS = [
   {
@@ -54,7 +63,22 @@ export default function Home() {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [toasts, setToasts] = useState<ToastData[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const toastIdRef = useRef(0);
+
+  // 토스트 헬퍼
+  const addToast = useCallback((variant: ToastVariant, title: string, message: string) => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, variant, title, message }]);
+  }, []);
+
+  const removeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  // 결과 카드 진입 애니메이션 — 마운트 시 클래스 적용
+  const [resultEnterKey, setResultEnterKey] = useState(0);
 
   const selectPreset = (preset: (typeof EXAMPLE_PRESETS)[number]) => {
     setMessage(preset.message);
@@ -72,6 +96,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     setResult(null);
+    addToast("loading", "분석 중", "메시지를 분석하고 있습니다…");
 
     try {
       const res = await fetch("/api/analyze", {
@@ -95,8 +120,10 @@ export default function Home() {
       }
 
       setResult(data);
+      addToast("success", "분석 완료", "결과를 확인하려면 아래 카드를 참고하세요.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
+      addToast("error", "분석 오류", e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
@@ -115,15 +142,35 @@ export default function Home() {
   const resultHeadClass = `result-head result-head--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`;
   const prohibitedBoxClass = `prohibited-box prohibited-box--${prohibitedSummary ? "error" : "success"}`;
 
+  // 결과가 새로 설정되면 진입 애니메이션 키 변경
+  useEffect(() => {
+    if (result) {
+      setResultEnterKey((k) => k + 1);
+    }
+  }, [result]);
+
   return (
     <main className="container">
       <a href="#main-content" className="skip-link">본문으로 이동</a>
+
+      {/* 토스트 알림 */}
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`toast toast--${t.variant}`}
+          role="alert"
+          aria-live="polite"
+        >
+          <div className="toast-title">{t.title}</div>
+          <div className="toast-message">{t.message}</div>
+        </div>
+      ))}
       {/* 헤더 */}
-      <header style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+      <header className="page-header">
         <h1 className="title">두번째문</h1>
         <p className="subtitle">
           의심 메시지를 붙여넣으면, 판단 대신{" "}
-          <strong style={{ color: "inherit" }}>멈추고 확인하는 절차</strong>를
+          <strong className="strong-inherit">멈추고 확인하는 절차</strong>를
           정리해 드립니다.
         </p>
         <div className="pill-group">
@@ -197,41 +244,15 @@ export default function Home() {
       {result && (
         <section
           id="main-content"
-          className="card"
+          className={`card result-enter`}
+          key={resultEnterKey}
           aria-live="polite"
         >
           {/* 결과 헤더 (분기 뱃지) */}
           <div className={resultHeadClass}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div className="result-head-row">
               <span
-                className="badge"
-                style={{
-                  background:
-                    result.branch === "즉시중지"
-                      ? "var(--error-surface)"
-                      : result.branch === "먼저확인"
-                      ? "var(--warning-surface)"
-                      : result.branch === "입력필요"
-                      ? "var(--muted-foreground)"
-                      : "var(--success-surface)",
-                  color:
-                    result.branch === "즉시중지"
-                      ? "var(--error-foreground)"
-                      : result.branch === "먼저확인"
-                      ? "var(--warning-foreground)"
-                      : result.branch === "입력필요"
-                      ? "var(--card-foreground)"
-                      : "var(--success-foreground)",
-                  border: "1px solid",
-                  borderColor:
-                    result.branch === "즉시중지"
-                      ? "var(--error-border)"
-                      : result.branch === "먼저확인"
-                      ? "var(--warning-border)"
-                      : result.branch === "입력필요"
-                      ? "var(--muted-foreground)"
-                      : "var(--success-border)",
-                }}
+                className={`result-head-badge result-head-badge--${result?.branch === "즉시중지" ? "error" : result?.branch === "먼저확인" ? "warning" : result?.branch === "입력필요" ? "muted" : "success"}`}
               >
                 {result.branchLabel}
               </span>
@@ -246,7 +267,7 @@ export default function Home() {
 
           {/* 7개 필드 */}
           <div className="field-list">
-            <dl style={{ display: "grid", gap: "1rem" }}>
+            <dl className="result-fields-dl">
               {([
                 ["상태", "status"],
                 ["중단조치", "중단조치"],
@@ -269,22 +290,12 @@ export default function Home() {
             {/* 금지 패턴 표시 */}
             <div className={prohibitedBoxClass}>
               <p
-                className="prohibited-box-title"
-                style={{
-                  color: prohibitedSummary
-                    ? "var(--error-foreground)"
-                    : "var(--success-foreground)",
-                }}
+                className={`prohibited-box-title prohibited-box-title--${prohibitedSummary ? "error" : "success"}`}
               >
                 {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
               </p>
               <p
-                className="prohibited-box-text"
-                style={{
-                  color: prohibitedSummary
-                    ? "var(--error-foreground)"
-                    : "var(--success-foreground)",
-                }}
+                className={`prohibited-box-text prohibited-box-text--${prohibitedSummary ? "error" : "success"}`}
               >
                 {result.prohibited.join(" · ")}
               </p>
@@ -300,37 +311,23 @@ export default function Home() {
 
       {/* 어떻게 쓰면 되나요? */}
       {!result && (
-        <section className="card" style={{ padding: "1.5rem", marginBottom: "1.75rem" }}>
-          <h2 style={{ margin: "0 0 0.75rem" }}>어떻게 쓰면 되나요?</h2>
-          <ul
-            style={{
-              margin: "0 0 0.5rem",
-              padding: "0 0 0 1.2rem",
-              lineHeight: 1.7,
-              color: "var(--foreground)",
-            }}
-          >
+        <section className="card howto-section">
+          <h2 className="howto-title">어떻게 쓰면 되나요?</h2>
+          <ul className="howto-list">
             <li>
               의심되는 문자·카톡·이메일 내용을{" "}
-              <strong style={{ color: "inherit" }}>그대로</strong> 붙여넣으세요.
+              <strong>그대로</strong> 붙여넣으세요.
             </li>
             <li>
               분석 버튼만 누르면 됩니다. 별도 가입·로그인·키 입력이 없습니다.
             </li>
             <li>
               결과는 메시지 진위를 판정하지 않습니다. 대신{" "}
-              <strong style={{ color: "inherit" }}>멈추고, 이미 알던 경로로 확인하는</strong>{" "}
+              <strong>멈추고, 이미 알던 경로로 확인하는</strong>{" "}
               절차를 정리해 드립니다.
             </li>
           </ul>
-          <p
-            style={{
-              marginTop: "1rem",
-              color: "var(--muted-foreground)",
-              fontSize: "0.9rem",
-              lineHeight: 1.6,
-            }}
-          >
+          <p className="howto-note">
             {CONTEXT_NOTE}
           </p>
         </section>
