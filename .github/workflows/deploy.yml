@@ -20,24 +20,21 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: mabc-second-door/pnpm-lock.yaml
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9
-          run_install: false
+      - name: Enable pnpm via corepack
+        run: corepack enable
 
       - name: Install dependencies
         working-directory: mabc-second-door
-        run: npx pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build for Cloudflare
         working-directory: mabc-second-door
-        run: npx pnpm build:cloudflare
+        run: pnpm build:cloudflare
         env:
           NODE_ENV: production
 
       - name: Deploy to Cloudflare Workers
         working-directory: mabc-second-door
-        run: npx wrangler deploy --config wrangler.jsonc
+        run: pnpm exec wrangler deploy --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
