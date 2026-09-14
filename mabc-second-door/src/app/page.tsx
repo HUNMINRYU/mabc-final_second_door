@@ -73,11 +73,14 @@ const CONTEXT_NOTE =
 
 export default function Home() {
   const [message, setMessage] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imageMimeType, setImageMimeType] = useState<string | null>(null);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState<ToastData | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // 토스트 헬퍼 — 새 토스트가 오면 이전 토스트는 제거됨(단일 토스트)
@@ -109,9 +112,47 @@ export default function Home() {
     textareaRef.current?.focus();
   }, [clearToast]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setImageDataUrl(null);
+      setImageMimeType(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("이미지 파일만 올릴 수 있습니다.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setError("이미지는 8MB 이하만 올릴 수 있습니다.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageDataUrl(reader.result as string);
+      setImageMimeType(file.type);
+      setError("");
+    };
+    reader.onerror = () => {
+      setError("이미지 읽기에 실패했습니다.");
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearImage = () => {
+    setImageDataUrl(null);
+    setImageMimeType(null);
+    if (imageRef.current) {
+      imageRef.current.value = "";
+    }
+  };
+
   const handleAnalyze = async () => {
-    if (!message.trim()) {
-      setError("분석할 메시지를 입력해 주세요. 최소 한 줄 이상이어야 합니다.");
+    if (!message.trim() && !imageDataUrl) {
+      setError("분석할 메시지를 입력하거나, 이미지를 올려 주세요. 최소 한 줄 이상의 메시지나 OCR 가능한 선명한 이미지가 필요합니다.");
       return;
     }
 
@@ -121,10 +162,17 @@ export default function Home() {
     addToast("loading", "분석 중", "메시지를 분석하고 있습니다…");
 
     try {
+      const bodyPayload: Record<string, unknown> = { message };
+      if (imageDataUrl) {
+        bodyPayload.image = {
+          data: imageDataUrl,
+          mimeType: imageMimeType ?? "image/png",
+        };
+      }
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify(bodyPayload),
       });
 
       if (!res.ok) {
@@ -288,6 +336,44 @@ export default function Home() {
             최소 한 줄 이상의 의심 메시지 원문을 넣어 주세요.
           </span>
 
+          {imageDataUrl ? (
+            <div className="image-upload-area image-upload-area--active">
+              <div className="image-preview">
+                <img src={imageDataUrl} alt="올린 이미지 미리보기" className="image-preview-img" />
+                <button
+                  type="button"
+                  className="image-preview-remove"
+                  onClick={clearImage}
+                  aria-label="올린 이미지 삭제"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="image-preview-label">
+                올린 이미지 — 분석을 다시 누르면 이 이미지에서 텍스트를 읽습니다.
+              </p>
+            </div>
+          ) : (
+            <div className="image-upload-area">
+              <input
+                ref={imageRef}
+                id="message-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="image-input"
+                aria-describedby="image-hint"
+              />
+              <label htmlFor="message-image" className="image-upload-label">
+                <span className="image-upload-icon" aria-hidden="true">+</span>
+                <span className="image-upload-text">사진 올리기</span>
+              </label>
+              <span id="image-hint" className="text-tiny">
+                메시지 대신 이미지 속 문자(문자 메시지·카톡 화면 캡처 등)를 올리고 싶다면 여기 파일을 선택하세요.
+              </span>
+            </div>
+          )}
+
           <div className="chip-row">
             <div className="chip-group">
               {EXAMPLE_PRESETS.map((p) => (
@@ -309,7 +395,7 @@ export default function Home() {
           <div className="action-row">
             <button
               type="submit"
-              disabled={loading || !message.trim()}
+              disabled={loading || (!message.trim() && !imageDataUrl)}
               className="analyze-button"
             >
               {loading && <span className="spinner" aria-hidden="true" />}
@@ -437,6 +523,12 @@ export default function Home() {
                 )}
               </div>
 
+              <div className="result-section-divider" />
+
+              <div className="result-section-label-bar">
+                7개 필드 — 규칙 기반
+              </div>
+
               {/* 7개 필드 상세 — 접기/펼치기 */}
               <details className="result-fields-toggle">
                 <summary>
@@ -472,75 +564,85 @@ export default function Home() {
                       </div>
                     ))}
                   </dl>
-
-                  {/* 공공데이터 참고 정보 */}
-                  {result.publicDataInfo && (
-                    <div className="public-data-section">
-                      <h3 className="public-data-title">
-                        📚 참고 정보 — 공공데이터 기반
-                      </h3>
-
-                      {/* 사기 유형 태그 */}
-                      {result.publicDataInfo.fraudTypeTags.length > 0 && (
-                        <div className="public-data-card">
-                          <p className="public-data-label">관련 유형</p>
-                          <ul className="tag-list">
-                            {result.publicDataInfo.fraudTypeTags.map((t) => (
-                              <li key={t.tag} className="tag-item">
-                                <span className="tag-name">{t.tag}</span>
-                                <span className="tag-source">
-                                  {t.source === "official" ? "공식 분류" : "종합 분류"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* 예방 팁 */}
-                      {result.publicDataInfo.preventionTips.length > 0 && (
-                        <div className="public-data-card">
-                          <p className="public-data-label">예방 참고</p>
-                          <ul className="tip-list">
-                            {result.publicDataInfo.preventionTips.map((t, i) => (
-                              <li key={i} className="tip-item">
-                                <span className="tip-text">{t.tip}</span>
-                                <span className="tip-source">
-                                  {t.source === "official" ? "공식 안내" : "종합 안내"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* 사용 출처 */}
-                      <div className="public-data-card public-data-sources">
-                        <p className="public-data-label">사용한 공공데이터 출처</p>
-                        <ul className="source-list">
-                          {result.publicDataInfo.dataSources.map((s, i) => (
-                            <li key={i} className="source-item">
-                              <a
-                                href={s.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="source-link"
-                              >
-                                {s.name}
-                              </a>
-                              <span className="source-type">
-                                {s.source === "official" ? "공식" : "종합"}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </details>
 
-              {/* 금지 패턴 검사 */}
+              <div className="result-section-divider" />
+
+              <div className="result-section-label-bar">
+                공공데이터 참고 정보
+              </div>
+
+              {/* 공공데이터 참고 정보 */}
+              {result.publicDataInfo && (
+                <div className="public-data-section">
+                  <h3 className="public-data-title">
+                    📚 참고 정보 — 공공데이터 기반
+                  </h3>
+
+                  {/* 사기 유형 태그 */}
+                  {result.publicDataInfo.fraudTypeTags.length > 0 && (
+                    <div className="public-data-card">
+                      <p className="public-data-label">관련 유형</p>
+                      <ul className="tag-list">
+                        {result.publicDataInfo.fraudTypeTags.map((t) => (
+                          <li key={t.tag} className="tag-item">
+                            <span className="tag-name">{t.tag}</span>
+                            <span className="tag-source">
+                              {t.source === "official" ? "공식 분류" : "종합 분류"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 예방 팁 */}
+                  {result.publicDataInfo.preventionTips.length > 0 && (
+                    <div className="public-data-card">
+                      <p className="public-data-label">예방 참고</p>
+                      <ul className="tip-list">
+                        {result.publicDataInfo.preventionTips.map((t, i) => (
+                          <li key={i} className="tip-item">
+                            <span className="tip-text">{t.tip}</span>
+                            <span className="tip-source">
+                              {t.source === "official" ? "공식 안내" : "종합 안내"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 사용 출처 */}
+                  <div className="public-data-card public-data-sources">
+                    <p className="public-data-label">사용한 공공데이터 출처</p>
+                    <ul className="source-list">
+                      {result.publicDataInfo.dataSources.map((s, i) => (
+                        <li key={i} className="source-item">
+                          <a
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="source-link"
+                          >
+                            {s.name}
+                          </a>
+                          <span className="source-type">
+                            {s.source === "official" ? "공식" : "종합"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <div className="result-section-divider" />
+              <div className="result-section-label-bar">
+                금지 패턴 검사
+              </div>
+
               <div className={prohibitedBoxClass}>
                 <p
                   className={`prohibited-box-title prohibited-box-title--${
