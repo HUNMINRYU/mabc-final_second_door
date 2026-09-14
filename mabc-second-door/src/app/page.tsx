@@ -23,6 +23,13 @@ type AnalyzeResult = {
   prohibited: string[];
   notice: string;
   timestamp: string;
+  // OCR 관련 (route.ts에서 반환)
+  ocrLowConfidence?: boolean;
+  ocrExtractedText?: string;
+  ocrNote?: string;
+  // Solar Pro 4 보강 결과 (키 있을 때만)
+  solarReasoning?: string;
+  solarGuidance?: string;
 };
 
 type ToastVariant = "loading" | "success" | "error" | "info";
@@ -215,6 +222,15 @@ export default function Home() {
     prohibitedSummary ? "error" : "success"
   }`;
 
+  const badgeClass = (branch: string | undefined) =>
+    branch === "즉시중지"
+      ? "error"
+      : branch === "먼저확인"
+        ? "warning"
+        : branch === "입력필요"
+          ? "muted"
+          : "success";
+
   return (
     <main className="container">
       <a href="#main-content" className="skip-link">
@@ -335,15 +351,9 @@ export default function Home() {
               <div className={resultHeadClass}>
                 <div className="result-head-row">
                   <span
-                    className={`result-head-badge result-head-badge--${
-                      result?.branch === "즉시중지"
-                        ? "error"
-                        : result?.branch === "먼저확인"
-                          ? "warning"
-                          : result?.branch === "입력필요"
-                            ? "muted"
-                            : "success"
-                    }`}
+                    className={`result-head-badge result-head-badge--${badgeClass(
+                      result?.branch,
+                    )}`}
                   >
                     {result.branchLabel}
                   </span>
@@ -366,112 +376,186 @@ export default function Home() {
               <h2 id="result-title" className="result-modal-title">
                 분석 결과
               </h2>
-              <div className="field-list">
-                <dl className="result-fields-dl">
-                  {([
-                    ["상태", "status"],
-                    ["중단조치", "중단조치"],
-                    ["확인할주장", "확인할주장"],
-                    ["독립확인", "독립확인"],
-                    ["답장예시", "답장예시"],
-                    ["판단이유", "판단이유"],
-                    ["하지말것", "하지말것"],
-                  ] as const).map(([labelKey, fieldKey]) => (
-                    <div key={fieldKey} className="field-row">
-                      <dt className="field-label">{labelKey}</dt>
-                      <dd className="field-value">{result.fields[fieldKey]}</dd>
-                    </div>
-                  ))}
-                </dl>
 
-                {/* 공공데이터 참고 정보 (출처 + 유형 태그 + 예방 팁 + 시나리오 노트) */}
-                {result.publicDataInfo && (
-                  <div className="public-data-section">
-                    <h3 className="public-data-title">📚 참고 정보</h3>
+              {/* 핵심 안내 — 분기 + 지금 할 일 + 근거 */}
+              <div className="result-summary">
+                <div className="result-summary-row">
+                  <span
+                    className={`result-head-badge result-head-badge--${badgeClass(
+                      result?.branch,
+                    )}`}
+                  >
+                    {result.branchLabel}
+                  </span>
+                  <span className="result-meta">{result.status}</span>
+                </div>
 
-                    {/* 시나리오 노트 */}
-                    <div className="public-data-card">
-                      <p className="public-data-label">시나리오 노트</p>
-                      <p className="public-data-text">
-                        {result.publicDataInfo.scenarioNote}
-                      </p>
-                    </div>
+                {/* 지금 할 일 (중단조치 기반 핵심 한 줄) */}
+                <div className="result-now">
+                  <p className="result-now-label">지금 이럴 때</p>
+                  <p className="result-now-text">
+                    {result.solarGuidance ??
+                      result.fields["중단조치"]}
+                  </p>
+                </div>
 
-                    {/* 사기 유형 태그 */}
-                    {result.publicDataInfo.fraudTypeTags.length > 0 && (
-                      <div className="public-data-card">
-                        <p className="public-data-label">관련 유형 태그</p>
-                        <ul className="tag-list">
-                          {result.publicDataInfo.fraudTypeTags.map((t) => (
-                            <li key={t.tag} className="tag-item">
-                              <span className="tag-name">{t.tag}</span>
-                              <span className="tag-source">
-                                {t.source === "official" ? "공식 분류" : "종합 분류"}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {/* 근거 한 줄 (공공데이터) */}
+                {result.publicDataInfo.scenarioNote && (
+                  <p className="result-basis">
+                    <span className="result-basis-label">이 안내의 근거</span>
+                    <span className="result-basis-text">
+                      {result.publicDataInfo.scenarioNote}
+                    </span>
+                  </p>
+                )}
 
-                    {/* 예방 팁 */}
-                    {result.publicDataInfo.preventionTips.length > 0 && (
-                      <div className="public-data-card">
-                        <p className="public-data-label">예방 참고</p>
-                        <ul className="tip-list">
-                          {result.publicDataInfo.preventionTips.map((t, i) => (
-                            <li key={i} className="tip-item">
-                              <span className="tip-text">{t.tip}</span>
-                              <span className="tip-source">
-                                {t.source === "official" ? "공식 안내" : "종합 안내"}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* 사용 출처 */}
-                    <div className="public-data-card public-data-sources">
-                      <p className="public-data-label">사용한 공공데이터 출처</p>
-                      <ul className="source-list">
-                        {result.publicDataInfo.dataSources.map((s, i) => (
-                          <li key={i} className="source-item">
-                            <a
-                              href={s.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="source-link"
-                            >
-                              {s.name}
-                            </a>
-                            <span className="source-type">
-                              {s.source === "official" ? "공식" : "종합"}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                {/* Solar 보강 판단이유가 있으면 우선 노출 */}
+                {result.solarReasoning && (
+                  <div className="solar-reasoning">
+                    <p className="solar-reasoning-label">AI 보강 안내</p>
+                    <p className="solar-reasoning-text">
+                      {result.solarReasoning}
+                    </p>
                   </div>
                 )}
 
-                {/* 금지 패턴 표시 */}
-                <div className={prohibitedBoxClass}>
-                  <p
-                    className={`prohibited-box-title prohibited-box-title--${
-                      prohibitedSummary ? "error" : "success"
-                    }`}
-                  >
-                    {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
-                  </p>
-                  <p
-                    className={`prohibited-box-text prohibited-box-text--${
-                      prohibitedSummary ? "error" : "success"
-                    }`}
-                  >
-                    {result.prohibited.join(" · ")}
-                  </p>
+                {/* OCR: 낮은 신뢰도로 읽은 텍스트가 있으면 확인 영역 */}
+                {result.ocrLowConfidence && result.ocrExtractedText && (
+                  <div className="ocr-review">
+                    <p className="ocr-review-label">
+                      이미지에서 읽은 텍스트 — 글자가 덜 읽혔을 수 있어요.
+                      필요하면 아래 텍스트를 직접 고쳐 주세요.
+                    </p>
+                    <textarea
+                      className="ocr-review-textarea"
+                      value={result.ocrExtractedText}
+                      rows={4}
+                      aria-label="이미지에서 읽은 텍스트 (수정 가능)"
+                    />
+                    <p className="ocr-review-note">{result.ocrNote}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 7개 필드 상세 — 접기/펼치기 */}
+              <details className="result-fields-toggle">
+                <summary>
+                  <span className="result-fields-toggle-button">
+                    7개 필드 자세히 보기
+                  </span>
+                </summary>
+                <div id="result-fields-detail" className="result-fields-detail">
+                  <dl className="result-fields-dl">
+                    {[
+                      ["상태", "상태"],
+                      ["중단조치", "중단조치"],
+                      ["확인할주장", "확인할주장"],
+                      ["독립확인", "독립확인"],
+                      ["답장예시", "답장예시"],
+                      ["판단이유",
+                        result.solarReasoning
+                          ? "규칙 기반 판단이유 (AI 보강 결과 위와 같음)"
+                          : "판단이유"],
+                      ["하지말것", "하지말것"],
+                    ].map(([labelKey, fieldKey]) => (
+                      <div key={fieldKey} className="field-row">
+                        <dt className="field-label">{labelKey}</dt>
+                        <dd className="field-value">
+                          {fieldKey === "판단이유" && result.solarReasoning ? (
+                            <span className="field-value-muted">
+                              (위 AI 보강 안내와 같음)
+                            </span>
+                          ) : (
+                            result.fields[fieldKey]
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  {/* 공공데이터 참고 정보 */}
+                  {result.publicDataInfo && (
+                    <div className="public-data-section">
+                      <h3 className="public-data-title">
+                        📚 참고 정보 — 공공데이터 기반
+                      </h3>
+
+                      {/* 사기 유형 태그 */}
+                      {result.publicDataInfo.fraudTypeTags.length > 0 && (
+                        <div className="public-data-card">
+                          <p className="public-data-label">관련 유형</p>
+                          <ul className="tag-list">
+                            {result.publicDataInfo.fraudTypeTags.map((t) => (
+                              <li key={t.tag} className="tag-item">
+                                <span className="tag-name">{t.tag}</span>
+                                <span className="tag-source">
+                                  {t.source === "official" ? "공식 분류" : "종합 분류"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 예방 팁 */}
+                      {result.publicDataInfo.preventionTips.length > 0 && (
+                        <div className="public-data-card">
+                          <p className="public-data-label">예방 참고</p>
+                          <ul className="tip-list">
+                            {result.publicDataInfo.preventionTips.map((t, i) => (
+                              <li key={i} className="tip-item">
+                                <span className="tip-text">{t.tip}</span>
+                                <span className="tip-source">
+                                  {t.source === "official" ? "공식 안내" : "종합 안내"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 사용 출처 */}
+                      <div className="public-data-card public-data-sources">
+                        <p className="public-data-label">사용한 공공데이터 출처</p>
+                        <ul className="source-list">
+                          {result.publicDataInfo.dataSources.map((s, i) => (
+                            <li key={i} className="source-item">
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="source-link"
+                              >
+                                {s.name}
+                              </a>
+                              <span className="source-type">
+                                {s.source === "official" ? "공식" : "종합"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </details>
+
+              {/* 금지 패턴 검사 */}
+              <div className={prohibitedBoxClass}>
+                <p
+                  className={`prohibited-box-title prohibited-box-title--${
+                    prohibitedSummary ? "error" : "success"
+                  }`}
+                >
+                  {prohibitedSummary ? "⚠ 금지 패턴 검사" : "✅ 금지 패턴 검사"}
+                </p>
+                <p
+                  className={`prohibited-box-text prohibited-box-text--${
+                    prohibitedSummary ? "error" : "success"
+                  }`}
+                >
+                  {result.prohibited.join(" · ")}
+                </p>
               </div>
 
               {/* 안내문 */}

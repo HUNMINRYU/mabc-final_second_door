@@ -507,6 +507,91 @@ function buildFields(raw: string): {
   };
 }
 
+/** Solar Pro 4 보강 (키 있을 때만)
+ * 규칙 기반 7필드는 그대로 두고, 판단이유·안내 문장을 더 읽기 쉽게 보강하는 용도.
+ * 판정 어휘(사기/진짜/가짜/안전 등)는 절대 추가하지 않음.
+ * Upstage Chat completions API (POST /v1/chat/completions) 사용.
+ * 모델명은 SOLAR_MODEL 환경변수 또는 기본값. 실제 모델 ID는 Upstage 대시보드 기준.
+ */
+async function buildSolarReasoning(
+  apiKey: string,
+  fields: Record<string, string>,
+  branch: string,
+  publicDataInfo: {
+    fraudTypeTags: { tag: string; source: string }[];
+    preventionTips: { tip: string; source: string }[];
+    scenarioNote: string;
+  },
+): Promise<{ reasoning?: string; guidance?: string }> {
+  const model = process.env.SOLAR_MODEL ?? "solar-pro4-0628";
+  const prompt = `당신은 의심되는 메시지를 접한 사람에게 "멈추고 이미 알고 있던 경로로 확인하는 절차"를 안내하는 도우미입니다.
+다음 정보는 규칙 기반으로 정리한 결과와 참고 정보입니다. 이 내용을 바탕으로,
+- "판단이유"를 더 읽기 쉬운 한 단락으로 다듬고,
+- "지금 이럴 때"(중단조치 기반) 안내 한 줄을 더 또렷하게 보강해 주세요.
+
+규칙: 절대 "사기", "진짜", "가짜", "안전", "위험", "피싱", "스미싱", "보이스피싱" 같은 판정 어휘를 만들지 마세요.
+숫자나 %로 가능성을 표현하지 마세요(확률·점수·백분율 금지).
+112, 119, 1332, 1366, 1398, 1345 같은 긴급·기관 번호를 숫자로 넣지 마세요.
+환불·복구·배상·보상 약속 문장을 만들지 마세요.
+
+출력은 JSON만 반환하세요. 추가 설명 없음.
+{"reasoning": "... 다듬은 판단이유 ...", "guidance": "... 또렷해진 지금 이럴 때 안내 한 줄 ..."}
+
+현재 분기: ${branch}
+규칙 기반 판단이유: ${fields["판단이유"]}
+규칙 기반 중단조치: ${fields["중단조치"]}
+규칙 기반 하지말것: ${fields["하지말것"]}
+규칙 기반 독립확인: ${fields["독립확인"]}
+공공데이터 참고 정보:
+- 시나리오노트: ${publicDataInfo.scenarioNote}
+- 사기유형태그: ${JSON.stringify(publicDataInfo.fraudTypeTags)}
+- 예방팁: ${JSON.stringify(publicDataInfo.preventionTips)}
+`;
+
+  const res = await fetch("https://api.upstage.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 800,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Solar API 오류: ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?: string;
+  };
+  const text =
+    data.choices?.[0]?.message?.content ?? data.error ?? "";
+  try {
+    const parsed = JSON.parse(text);
+    return {
+      reasoning:
+        typeof parsed.reasoning === "string" && parsed.reasoning.trim()
+          ? parsed.reasoning.trim()
+          : undefined,
+      guidance:
+        typeof parsed.guidance === "string" && parsed.guidance.trim()
+          ? parsed.guidance.trim()
+          : undefined,
+    };
+  } catch {
+    return {
+      reasoning:
+        text.includes("reasoning") || text.includes("판단이유") ? text : undefined,
+    };
+  }
+}
+
 /** 금지 패턴 검사 (P0 표시용) */
 function prohibitedSummary(fields: Record<string, string>): string[] {
   const list = checkProhibitedOutput(fields);
@@ -608,6 +693,24 @@ export async function POST(request: NextRequest) {
 
     const { fields, publicDataInfo, branch } = buildFields(analyzeText);
 
+    // ---- Solar Pro 4 보강 (키 있을 때만, 실패해도 기존 결과 유지) ----
+    let solarReasoning: string | undefined;
+    let solarGuidance: string | undefined;
+    if (apiKey) {
+      try {
+        const solar = await buildSolarReasoning(
+          apiKey,
+          fields,
+          branch,
+          publicDataInfo,
+        );
+        solarReasoning = solar.reasoning;
+        solarGuidance = solar.guidance;
+      } catch {
+        // Solar 보강 실패 시 규칙 기반 결과 그대로 사용
+      }
+    }
+
     // 금지 패턴 검사 결과 (fields만 검사 — publicDataInfo는 제외)
     const prohibited = checkProhibitedOutput(fields);
 
@@ -623,6 +726,13 @@ export async function POST(request: NextRequest) {
       notice:
         "이 결과는 메시지 진위를 판정하지 않습니다. 공공데이터를 참고한 독립 확인 절차를 정리한 것입니다. 제공을 식별하지 않고 범주로만 표현했습니다.",
     };
+
+    if (solarReasoning) {
+      responseBody.solarReasoning = solarReasoning;
+    }
+    if (solarGuidance) {
+      responseBody.solarGuidance = solarGuidance;
+    }
 
     if (ocrLowConfidence) {
       responseBody.ocrLowConfidence = true;
