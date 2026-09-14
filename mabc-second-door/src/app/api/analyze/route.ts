@@ -54,6 +54,44 @@ function sanitizeIdentifiers(text: string): string {
   return s;
 }
 
+/**
+ * Upstage Document OCR API로 이미지에서 텍스트 추출
+ * Workers 런타임: atob, Blob, FormData 지원
+ */
+async function extractTextFromImage(
+  base64Data: string,
+  apiKey: string,
+  mimeType: string = "image/png",
+): Promise<{ text: string; confidence: number | null }> {
+  const cleanBase64 = base64Data.replace(/^data:[a-zA-Z]+\/[a-zA-Z]+;base64,/, "");
+  const binary = atob(cleanBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], { type: mimeType });
+  const formData = new FormData();
+  formData.append("document", blob, "image.png");
+  formData.append("model", "ocr");
+
+  const res = await fetch("https://api.upstage.ai/v1/document-digitization", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData,
+  });
+  if (!res.ok) {
+    throw new Error(`OCR API 오류: ${res.status}`);
+  }
+  const data = (await res.json()) as {
+    text?: string;
+    confidence?: number;
+  };
+  return {
+    text: data.text ?? "",
+    confidence: data.confidence ?? null,
+  };
+}
+
 /** 금지 출력 패턴 검사: 이 서비스의 출력에 포함되어서는 안 되는 것 */
 function checkProhibitedOutput(fields: Record<string, string>): string[] {
   const prohibited: string[] = [];
@@ -490,10 +528,75 @@ function branchLabel(branch: string): string {
 /** API 핸들러 */
 export async function POST(request: NextRequest) {
   try {
+    const apiKey = process.env.UPSTAGE_API_KEY ?? "";
     const body = await request.json();
     const rawMessage = body.message;
+    const rawImage = body.image;
 
-    if (typeof rawMessage !== "string" || rawMessage.trim().length === 0) {
+    // ---- OCR 처리 (이미지만, 또는 이미지 + 텍스트) ----
+    let ocrExtractedText = "";
+    let ocrLowConfidence = false;
+    let ocrNote: string | null = null;
+    let ocrFailure = false;
+
+    if (rawImage && typeof rawImage === "object" && rawImage.data) {
+      const imageData = rawImage.data;
+      const mimeType = (rawImage.mimeType as string) ?? "image/png";
+
+      if (!apiKey) {
+        // OCR 키 없음 — 기존 텍스트-only 경로로 fallback
+        ocrNote = "이미지 분석을 시도했지만, OCR API 키가 설정되지 않아 이미지에서 텍스트를 읽지 못했습니다. 텍스트를 직접 입력해 주세요.";
+        ocrFailure = true;
+      } else {
+        try {
+          const ocrResult = await extractTextFromImage(imageData, apiKey, mimeType);
+          ocrExtractedText = ocrResult.text;
+          // confidence 기준: 명시적으로 낮을 때만 플래그(기준은추후 조정)
+          // Upstage confidence는 0~1 범위. 0.7 미만을 "낮음"으로 시작.
+          if (ocrResult.confidence !== null && ocrResult.confidence < 0.7) {
+            ocrLowConfidence = true;
+          }
+          if (!ocrExtractedText.trim()) {
+            ocrNote = "이미지에서 텍스트를 충분히 읽지 못했습니다. 텍스트를 직접 입력해 주세요.";
+            ocrFailure = true;
+          }
+        } catch (ocrErr) {
+          const msg =
+            ocrErr instanceof Error ? ocrErr.message : "이미지 분석 중 오류";
+          ocrNote = `이미지 분석 중 오류가 발생했습니다: ${msg}. 텍스트를 직접 입력해 주세요.`;
+          ocrFailure = true;
+        }
+      }
+    }
+
+    // ---- 분석 대상 텍스트 ----
+    // OCR 추출 텍스트가 있고 원문 메시지가 없으면 OCR 텍스트만 사용
+    // 둘 다 있으면 결합 (메시지가 주, OCR이 보조)
+    let analyzeText: string;
+    if (ocrExtractedText && !rawMessage) {
+      analyzeText = ocrExtractedText;
+    } else if (ocrExtractedText && rawMessage) {
+      analyzeText = rawMessage + "\n\n[이미지 추출 텍스트]\n" + ocrExtractedText;
+    } else {
+      analyzeText = rawMessage ?? "";
+    }
+
+    if (ocrFailure) {
+      // OCR 실패지만 원문 메시지가 있으면 원문만으로 계속 분석
+      if (rawMessage && typeof rawMessage === "string" && rawMessage.trim().length > 0) {
+        // 원문만으로 분석 계속 (ocrNote는 결과에 포함)
+      } else {
+        return NextResponse.json(
+          {
+            error: "분석할 내용이 필요합니다. 텍스트를 입력하거나, OCR 가능한 선명한 이미지를 올려 주세요.",
+            status: "입력필요",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (typeof analyzeText !== "string" || analyzeText.trim().length === 0) {
       return NextResponse.json(
         {
           error: "메시지가 필요합니다. 최소 한 줄 이상 입력해 주세요.",
@@ -503,16 +606,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { fields, publicDataInfo, branch } = buildFields(rawMessage);
+    const { fields, publicDataInfo, branch } = buildFields(analyzeText);
 
     // 금지 패턴 검사 결과 (fields만 검사 — publicDataInfo는 제외)
     const prohibited = checkProhibitedOutput(fields);
 
-    // ---- 주의: 원본 식별자는 절대 클라이언트에 그대로 보내지 않음 ----
-    // 이미 buildFields에서 sanitizeIdentifiers로 치환했으므로 fields 안에는
-    // [메시지 속 계좌]/[메시지 속 번호]/[링크]/[코드] 범주만 남아 있음.
-
-    return NextResponse.json({
+    // ---- OCR 신뢰도/추출 텍스트 응답 반영 ----
+    const responseBody: Record<string, unknown> = {
       status: fields["상태"],
       branch,
       branchLabel: branchLabel(branch),
@@ -522,7 +622,21 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
       notice:
         "이 결과는 메시지 진위를 판정하지 않습니다. 공공데이터를 참고한 독립 확인 절차를 정리한 것입니다. 제공을 식별하지 않고 범주로만 표현했습니다.",
-    });
+    };
+
+    if (ocrLowConfidence) {
+      responseBody.ocrLowConfidence = true;
+      responseBody.ocrExtractedText = ocrExtractedText;
+      responseBody.ocrNote = "이미지 속 글자가 덜 읽혔을 수 있어요. 아래 읽은 텍스트를 확인하고 필요하면 직접 고쳐 주세요.";
+    } else if (ocrExtractedText && !ocrFailure) {
+      responseBody.ocrExtractedText = ocrExtractedText;
+      responseBody.ocrNote = "이미지에서 읽은 텍스트를 분석에 반영했습니다.";
+    }
+    if (ocrNote && !ocrLowConfidence) {
+      responseBody.ocrNote = ocrNote;
+    }
+
+    return NextResponse.json(responseBody, { status: 200 });
   } catch (err) {
     return NextResponse.json(
       {
