@@ -523,7 +523,7 @@ async function buildSolarReasoning(
     scenarioNote: string;
   },
 ): Promise<{ reasoning?: string; guidance?: string }> {
-  const model = process.env.SOLAR_MODEL ?? "solar-pro4-0628";
+  const model = process.env.SOLAR_MODEL ?? "solar-pro4-260806";
   const prompt = `당신은 의심되는 메시지를 접한 사람에게 "멈추고 이미 알고 있던 경로로 확인하는 절차"를 안내하는 도우미입니다.
 다음 정보는 규칙 기반으로 정리한 결과와 참고 정보입니다. 이 내용을 바탕으로,
 - "판단이유"를 더 읽기 쉬운 한 단락으로 다듬고,
@@ -557,8 +557,9 @@ async function buildSolarReasoning(
     body: JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 800,
+      max_tokens: 4096,
       temperature: 0.3,
+      reasoning_effort: "high",
     }),
   });
 
