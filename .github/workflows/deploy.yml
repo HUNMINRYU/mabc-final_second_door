@@ -21,17 +21,18 @@ jobs:
           cache-dependency-path: mabc-second-door/pnpm-lock.yaml
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
+          run_install: false
 
       - name: Install dependencies
         working-directory: mabc-second-door
-        run: pnpm install --frozen-lockfile
+        run: npx pnpm install --frozen-lockfile
 
       - name: Build for Cloudflare
         working-directory: mabc-second-door
-        run: pnpm build:cloudflare
+        run: npx pnpm build:cloudflare
         env:
           NODE_ENV: production
 
