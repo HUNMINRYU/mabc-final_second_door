@@ -1,3 +1,6 @@
+# pnpm workspace — 단일 패키지
+packages:
+  - "."
 allowBuilds:
   esbuild: true
   unrs-resolver: true
